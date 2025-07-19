@@ -53,13 +53,66 @@ async fn main() {
     // compose the routes
 
     let app = Router::new()
-        .route("/", get(|| async {
-            Json(json!({"message": "Welcome to the Axum Postgres Rust API"}))
-        }));
+        .route("/", get(|| async {Json(json!({"message": "Welcome to the Axum Postgres Rust API"}))}))
+        .route("/tasks", get(get_tasks).post(create_task))
+        .route("/tasks/:task_id", patch(update_task).delete(delete_task))
+        .with_state(db_pool);
 
     // serve the application
 
     axum::serve(listener, app)
         .await
         .expect("Failed to start server");
+}
+
+#[derive(Deserialize, Serialize)]
+struct TaskRow {
+    task_id: i32,
+    name: String,
+    priority: Option<i32>,
+}
+
+async fn get_tasks(
+    State(pg_pool): State<PgPool>
+) -> Result<(StatusCode, String), (StatusCode, String)> {
+    let rows = sqlx::query_as!(TaskRow, "SELECT task_id, name, priority FROM tasks order by task_id")
+        .fetch_all(&pg_pool)
+        .await
+        .map_err(|e|{
+            (
+                StatusCode::INTERNAL_SERVER_ERROR, 
+                json!({"success": false, "message": e.to_string()}).to_string(),
+            )
+    })?;
+
+    Ok((
+        StatusCode::OK,
+        json!({"success": true, "tasks": rows}).to_string(),
+    ))
+}
+
+#[derive(Deserialize)]
+struct CreateTaskRequest {
+    name: String,
+    priority: Option<i32>,
+}
+
+async fn create_task(
+    State(pg_pool): State<PgPool>,
+) -> Result<(StatusCode, String), (StatusCode, String)> {
+    todo!()
+}
+
+async fn update_task(
+    Path(task_id): Path<i32>,
+    State(pg_pool): State<PgPool>
+) -> Result<(StatusCode, String), (StatusCode, String)> {
+    todo!()
+}
+
+async fn delete_task(
+    Path(task_id): Path<i32>,
+    State(pg_pool): State<PgPool>
+) -> Result<(StatusCode, String), (StatusCode, String)> {
+    todo!()
 }
