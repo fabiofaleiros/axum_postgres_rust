@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS TASKS (
+    task_id SERIAL PRIMARY KEY,
+    name VARCHAR NOT NULL,
+    priority INTEGER
+);
