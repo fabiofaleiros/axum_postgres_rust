@@ -25,6 +25,7 @@ use tokio::net::TcpListener;
 #[tokio::main]
 async fn main() {
     // expose the environment variables
+    doteenvy::dotenv().expect("Failed to read .env file");
 
     // set variables from the environment variables
 
