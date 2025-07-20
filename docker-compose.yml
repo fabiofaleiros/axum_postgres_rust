@@ -34,6 +34,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.9'
+          memory: '1.4GB'
     networks:
       - app-network
 
