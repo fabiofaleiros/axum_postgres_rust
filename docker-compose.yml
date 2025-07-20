@@ -1,79 +1,46 @@
-version: '3.5'
+version: '3.8'
 
 services:
-  # api01: &api
-  #   # image: distanteagle16/rinhabackend:latest
-  #   build: .
-  #   environment:
-  #     HTTP_PORT: 8080
-  #     DB_HOST: localhost
-  #     REDIS_HOST: localhost
-  #     POOL_SIZE: 30
-  #   depends_on:
-  #     - db
-  #     - redis
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         cpus: '0.15'
-  #         memory: '0.4GB'
-  #   network_mode: "host"
-
-  # api02:
-  #   <<: *api
-  #   environment:
-  #     HTTP_PORT: 8081
-  #     DB_HOST: localhost
-  #     REDIS_HOST: localhost
-  #     POOL_SIZE: 30
-
-  # nginx: # Load Balancer
-  #   image: nginx:latest
-  #   volumes:
-  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
-  #   depends_on:
-  #     - api01
-  #     - api02
-  #   network_mode: host
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         cpus: '0.15'
-  #         memory: '0.5GB'
-
-  db: # Banco de dados
-    image: postgres
-    #hostname: db
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "7878:7878"
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: 1234
-      POSTGRES_DB: axum_postgres
+      - DATABASE_URL=postgres://root:1234@postgres:5432/axum_postgres
+      - SERVER_ADDRESS=0.0.0.0:7878
+      - RUST_BACKTRACE=full
+      - SQLX_OFFLINE=true
+    networks:
+      - app-network
+
+  postgres:
+    image: postgres:15
     ports:
       - "5432:5432"
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=1234
+      - POSTGRES_DB=axum_postgres
     volumes:
+      - postgres-data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-      - ./postgresql.conf:/docker-entrypoint-initdb.d/postgresql.conf
-    command: postgres -c config_file=/docker-entrypoint-initdb.d/postgresql.conf
-    #network_mode: host
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready"]
+      test: ["CMD-SHELL", "pg_isready -U root -d axum_postgres"]
       interval: 5s
       timeout: 5s
-      retries: 20
-      start_period: 10s
-    deploy:
-      resources:
-        limits:
-          cpus: '0.9'
-          memory: '1.4GB'
+      retries: 5
+    networks:
+      - app-network
 
-  # redis:
-  #   image: redis
-  #   hostname: redis
-  #   network_mode: host
-  #   command: redis-server --save "" --appendonly no --maxclients 20000
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         cpus: '0.15'
-  #         memory: '0.3GB'
+volumes:
+  postgres-data:
+
+networks:
+  app-network:
+    driver: bridge
+    
