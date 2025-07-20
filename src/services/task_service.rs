@@ -24,6 +24,11 @@ impl TaskService {
         .await
         .map_err(AppError::Database)?;
 
+        // Validate each task before returning
+        for task in &rows {
+            task.validate().map_err(AppError::ValidationError)?;
+        }
+
         Ok(rows)
     }
 
@@ -113,7 +118,11 @@ impl TaskService {
         .map_err(AppError::Database)?;
 
         match task {
-            Some(task) => Ok(task),
+            Some(task) => {
+                // Validate the task before returning
+                task.validate().map_err(AppError::ValidationError)?;
+                Ok(task)
+            },
             None => Err(AppError::NotFound(format!("Task with id {} not found", task_id)))
         }
     }
@@ -128,6 +137,11 @@ impl TaskService {
         .fetch_all(&self.db_pool)
         .await
         .map_err(AppError::Database)?;
+
+        // Validate each task before returning
+        for task in &rows {
+            task.validate().map_err(AppError::ValidationError)?;
+        }
 
         Ok(rows)
     }
