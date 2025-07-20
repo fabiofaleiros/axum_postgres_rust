@@ -1,4 +1,5 @@
 run:
+	cargo clean
 	docker compose up postgres -d
 	cargo run --release
 
