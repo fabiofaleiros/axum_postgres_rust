@@ -10,6 +10,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.15'
+          memory: '0.4GB'
     environment:
       - DATABASE_URL=postgres://root:1234@postgres:5432/axum_postgres
       - SERVER_ADDRESS=0.0.0.0:7878
