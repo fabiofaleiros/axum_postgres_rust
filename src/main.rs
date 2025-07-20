@@ -55,7 +55,7 @@ async fn main() {
     let app = Router::new()
         .route("/", get(|| async {Json(json!({"message": "Welcome to the Axum Postgres Rust API"}))}))
         .route("/tasks", get(get_tasks).post(create_task))
-        //.route("/tasks/:task_id", patch(update_task).delete(delete_task))
+        .route("/tasks/{task_id}", patch(update_task).delete(delete_task))
         .with_state(db_pool);
 
     // serve the application
@@ -126,16 +126,54 @@ async fn create_task(
     ))
 }
 
+#[derive(Deserialize)]
+struct UpdateTaskRequest {
+  name: Option<String>,
+  priority: Option<i32>,
+}
+
 async fn update_task(
+    State(pg_pool): State<PgPool>,
     Path(task_id): Path<i32>,
-    State(pg_pool): State<PgPool>
+    Json(task): Json<UpdateTaskRequest>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
-    todo!()
+    sqlx::query_as!(
+        UpdateTaskRequest,
+        "UPDATE tasks SET name = COALESCE($1, name), priority = COALESCE($2, priority) WHERE task_id = $3",
+        task.name,
+        task.priority,
+        task_id
+    ).execute(&pg_pool)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                json!({"success": false, "message": e.to_string()}).to_string(),
+            )
+        })?;
+
+    Ok((
+        StatusCode::OK,
+        json!({"success": true, "message": "Task updated successfully"}).to_string(),
+    ))
 }
 
 async fn delete_task(
-    Path(task_id): Path<i32>,
-    State(pg_pool): State<PgPool>
+    State(pg_pool): State<PgPool>,
+    Path(task_id): Path<i32>
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
-    todo!()
+    sqlx::query!("DELETE FROM tasks WHERE task_id = $1", task_id)
+        .execute(&pg_pool)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                json!({"success": false, "message": e.to_string()}).to_string(),
+            )
+        })?;
+
+    Ok((
+        StatusCode::NO_CONTENT,
+        json!({"success": true, "message": "Task deleted successfully"}).to_string(),
+    ))
 }
