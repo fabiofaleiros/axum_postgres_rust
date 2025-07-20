@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT task_id, name, priority FROM tasks order by task_id",
+  "query": "SELECT task_id, name, priority FROM tasks WHERE task_id = $1",
   "describe": {
     "columns": [
       {
@@ -20,7 +20,9 @@
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Int4"
+      ]
     },
     "nullable": [
       false,
@@ -28,5 +30,5 @@
       true
     ]
   },
-  "hash": "c1abbb6f12011bcee57ec41d451e2a35b8c06483622e7be99c9ee303272e23ae"
+  "hash": "7d99947513c9f69d3ba0301e6220b5e3ae52f8cdf51fe645db3a3ccef93b05b1"
 }
