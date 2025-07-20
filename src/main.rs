@@ -55,7 +55,7 @@ async fn main() {
     let app = Router::new()
         .route("/", get(|| async {Json(json!({"message": "Welcome to the Axum Postgres Rust API"}))}))
         .route("/tasks", get(get_tasks).post(create_task))
-        .route("/tasks/:task_id", patch(update_task).delete(delete_task))
+        //.route("/tasks/:task_id", patch(update_task).delete(delete_task))
         .with_state(db_pool);
 
     // serve the application
@@ -65,7 +65,7 @@ async fn main() {
         .expect("Failed to start server");
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Serialize)]
 struct TaskRow {
     task_id: i32,
     name: String,
@@ -97,10 +97,33 @@ struct CreateTaskRequest {
     priority: Option<i32>,
 }
 
+#[derive(Serialize)]
+struct CreateTaskResponse {
+    task_id: i32,
+}
+
 async fn create_task(
     State(pg_pool): State<PgPool>,
+    Json(task): Json<CreateTaskRequest>
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
-    todo!()
+    let row = sqlx::query_as!(
+        CreateTaskResponse,
+        "INSERT INTO tasks (name, priority) VALUES ($1, $2) RETURNING task_id",
+        task.name,
+        task.priority
+    ).fetch_one(&pg_pool)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                json!({"success": false, "message": e.to_string()}).to_string(),
+            )
+        })?;
+
+    Ok((
+        StatusCode::CREATED,
+        json!({"success": true, "task_id": row}).to_string(),
+    ))
 }
 
 async fn update_task(
