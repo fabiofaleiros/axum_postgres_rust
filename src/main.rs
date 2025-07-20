@@ -1,5 +1,5 @@
 use axum::{
-    routing::{get, post, patch, delete},
+    routing::get,
     Json, Router,
 };
 use serde_json::json;
