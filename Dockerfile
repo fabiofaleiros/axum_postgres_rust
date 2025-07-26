@@ -1,4 +1,4 @@
-FROM rust:1.88.0 as builder
+FROM rust:1.88.0-bookworm as builder
 
 WORKDIR /app
 
@@ -13,11 +13,12 @@ RUN cargo build --release
 RUN rm -rf src
 COPY src ./src
 COPY .sqlx ./.sqlx
+COPY .env ./.env
 
 # Build the application with cached dependencies
 RUN cargo build --release
 
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 
@@ -25,10 +26,7 @@ WORKDIR /app
 
 # Copy the compiled binary from the builder stage
 COPY --from=builder /app/target/release/axum_postgres_rust .
-COPY .env ./.env
-
-ENV DATABASE_URL=postgres://root:1234@postgres:5432/axum_postgres
-ENV SERVER_ADDRESS=0.0.0.0:7878
+COPY --from=builder /app/.env ./.env
 
 EXPOSE 7878
 
