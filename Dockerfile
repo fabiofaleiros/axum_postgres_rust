@@ -28,9 +28,6 @@ WORKDIR /app
 COPY --from=builder /app/target/release/axum_postgres_rust .
 COPY --from=builder /app/.env ./.env
 
-ENV DATABASE_URL=postgres://root:1234@postgres:5432/axum_postgres
-ENV SERVER_ADDRESS=0.0.0.0:7878
-
 EXPOSE 7878
 
 CMD ["./axum_postgres_rust"]
