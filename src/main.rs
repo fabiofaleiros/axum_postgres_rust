@@ -8,18 +8,19 @@ use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
 
 // Import our modules
-mod models;
-mod controllers;
-mod services;
+mod domain;
+mod application;
+mod infrastructure;
 mod config;
 mod database;
-mod errors;
 mod responses;
 
 use config::Config;
 use database::Database;
-use services::TaskService;
-use controllers::TaskController;
+use std::sync::Arc;
+use domain::TaskRepository;
+use application::TaskUseCases;
+use infrastructure::adapters::{PostgresTaskRepository, TaskController};
 use tracing_subscriber::fmt::init;
 
 #[tokio::main]
@@ -33,8 +34,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create database connection pool
     let db_pool = Database::connect(&config).await?;
 
-    // Create service layer
-    let task_service = TaskService::new(db_pool);
+    // Create repository
+    let task_repository: Arc<dyn TaskRepository> = Arc::new(PostgresTaskRepository::new(db_pool));
+    
+    // Create use cases
+    let task_use_cases = Arc::new(TaskUseCases::new(task_repository));
+    
+    // Create controllers
+    let task_controller = Arc::new(TaskController::new(task_use_cases));
 
     // Create TCP listener
     let listener = TcpListener::bind(&config.server_address).await?;
@@ -57,7 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ServiceBuilder::new()
                 .layer(TraceLayer::new_for_http())
         )
-        .with_state(task_service);
+        .with_state(task_controller);
 
     // Start server
     axum::serve(listener, app).await?;

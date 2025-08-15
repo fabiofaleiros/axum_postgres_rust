@@ -1,8 +1,8 @@
-# Chapter 2: Handler Functions & Shared State
+# Chapter 2: Handler Functions & Shared State (Updated for Hexagonal Architecture)
 
-In [Chapter 1: Axum Web Router](01_axum_web_router.md), we met the application's "receptionist"—the router that directs incoming requests to the right place. But what happens after you've been directed to the right office? Someone actually has to do the work! In our application, that work is done by **Handler Functions**.
+In [Chapter 1: Axum Web Router](01_axum_web_router.md), we met the application's "receptionist"—the router that directs incoming requests to the right place. But what happens after you've been directed to the right office? Someone actually has to do the work! In our **hexagonal architecture**, that work is done by **Handler Functions** in the infrastructure layer, which coordinate with the application layer use cases.
 
-This chapter will explore what these functions are and, more importantly, how they access shared resources like a database connection in a smart and efficient way.
+This chapter will explore how handler functions work in our hexagonal architecture and how they access shared dependencies through dependency injection.
 
 ### The Employee and the Shared Printer
 
@@ -14,136 +14,199 @@ This is the exact problem that **Shared State** solves for our web application. 
 
 This "keycard" in Axum is the `State` extractor. The shared "printer" is our `PgPool` (PostgreSQL Connection Pool).
 
-### Anatomy of a Handler Function
+### Anatomy of a Handler Function in Hexagonal Architecture
 
-Let's look at a real handler function from our project, `get_tasks`, which handles `GET /tasks` requests.
+Let's look at a real handler function from our project, `get_tasks`, which handles `GET /tasks` requests. In our hexagonal architecture, this lives in the infrastructure layer's web adapter.
 
 ```rust
-// File: src/main.rs
+// File: src/infrastructure/adapters/web/task_controller.rs
 
-async fn get_tasks(
-    State(pg_pool): State<PgPool>
-) -> Result<(StatusCode, String), (StatusCode, String)> {
-    // ... code to fetch tasks from the database ...
+impl TaskController {
+    pub async fn get_tasks(
+        State(controller): State<Arc<TaskController>>,
+        Query(params): Query<TaskQuery>,
+    ) -> Result<Json<ApiResponse<TaskListResponse>>, WebError> {
+        let tasks = match params.priority {
+            Some(priority) => controller.task_use_cases.get_tasks_by_priority(priority).await?,
+            None => controller.task_use_cases.get_all_tasks().await?,
+        };
+
+        let response = ApiResponse::success(TaskListResponse { tasks });
+        Ok(Json(response))
+    }
 }
 ```
 
 Let's break this down:
 
-1.  **`async fn get_tasks(...)`**: This declares an **asynchronous** function named `get_tasks`. The `async` keyword is crucial. It means this function can perform tasks that might take a while (like talking to a database over a network) without blocking the entire application. It can "pause" its work and let the server handle other requests, then "resume" when the database responds.
+1.  **`pub async fn get_tasks(...)`**: This declares an **asynchronous** method in the `TaskController`. The `async` keyword allows this function to perform asynchronous operations like calling use cases.
 
-2.  **The Function Arguments (Extractors)**: The arguments to an Axum handler are special. They are called **extractors**. They "extract" information from the incoming request.
-    - `State(pg_pool)`: This is our keycard! It's the `State` extractor. It tells Axum, "For this function to work, I need access to the shared state."
-    - `pg_pool`: Axum unpacks the state and gives it to us in a variable named `pg_pool`. The type `PgPool` tells Axum exactly *which* piece of shared state we want (since a large app might have multiple shared resources).
+2.  **The Function Arguments (Extractors)**: 
+    - `State(controller)`: Instead of directly accessing the database, we now access the `TaskController` which contains injected dependencies.
+    - `Query(params)`: Extracts query parameters from the URL (like `?priority=5`).
 
-3.  **The Return Type**: This function returns a `Result`. This is a standard way in Rust to handle operations that might succeed or fail.
-    - `Ok((StatusCode, String))`: If everything goes well, it returns an HTTP status code (like `200 OK`) and a `String` containing the response data (our list of tasks as JSON).
-    - `Err((StatusCode, String))`: If something goes wrong (e.g., the database is down), it returns an error status code (like `500 Internal Server Error`) and an error message.
+3.  **Hexagonal Architecture Flow**: 
+    - The controller delegates business logic to the **application layer** (`task_use_cases`)
+    - It doesn't directly access the database - that's handled by the repository in the infrastructure layer
+    - The controller's job is only HTTP concerns: extracting parameters, calling use cases, and formatting responses
 
-### Putting the Shared State to Use
+4.  **The Return Type**: 
+    - `Ok(Json<ApiResponse<TaskListResponse>>)`: Returns a structured JSON response with proper typing
+    - `Err(WebError)`: Returns web-specific errors that are automatically converted to appropriate HTTP status codes
 
-Now let's see how `get_tasks` actually uses the `pg_pool` it received.
+### Dependency Injection in Hexagonal Architecture
+
+In our hexagonal architecture, the controller doesn't directly use a database pool. Instead, it uses **dependency injection** to access the application layer's use cases:
 
 ```rust
-// File: src/main.rs
-
-async fn get_tasks(
-    State(pg_pool): State<PgPool>
-) -> Result<(StatusCode, String), (StatusCode, String)> {
-    // This query asks the database for all tasks.
-    // We will learn more about this in the next chapter.
-    let rows = sqlx::query_as!(/*...query details...*/)
-        .fetch_all(&pg_pool) // <-- Here's the magic!
-        .await
-        .map_err(|e|{
-            // ... error handling ...
-        })?;
-
-    // If successful, format the tasks into a JSON string and return.
-    Ok((
-        StatusCode::OK,
-        json!({"success": true, "tasks": rows}).to_string(),
-    ))
-}
+// The controller delegates to use cases
+let tasks = controller.task_use_cases.get_all_tasks().await?;
 ```
 
-The most important line is `.fetch_all(&pg_pool)`. This is where our handler function takes the database connection pool it received from the `State` extractor and uses it to execute the query. It's "swiping the keycard" to use the shared printer.
+**How Dependencies Are Wired:**
 
-Without `State(pg_pool)`, our `get_tasks` function would have no way to talk to the database!
+1. **Repository Implementation** (Infrastructure Layer):
+   ```rust
+   let task_repository: Arc<dyn TaskRepository> = 
+       Arc::new(PostgresTaskRepository::new(db_pool));
+   ```
 
-### How is the State Shared? A Look at `main.rs`
+2. **Use Cases** (Application Layer):
+   ```rust
+   let task_use_cases = Arc::new(TaskUseCases::new(task_repository));
+   ```
 
-So, where does this shared state come from? We create it once when our application starts up in the `main` function.
+3. **Controller** (Infrastructure Web Adapter):
+   ```rust
+   let task_controller = Arc::new(TaskController::new(task_use_cases));
+   ```
 
-**Step 1: Create the Database Pool**
-
-First, we create the `PgPool` itself. This pool manages a set of open connections to our PostgreSQL database, ready to be used.
-
-```rust
-// File: src/main.rs
-
-// create the database connection pool
-let db_pool = PgPoolOptions::new()
-    .max_connections(16)
-    .connect(&database_url)
-    .await
-    .expect("Failed to create database connection pool");
+This creates a **dependency chain**:
+```
+TaskController → TaskUseCases → TaskRepository → Database
 ```
 
-**Step 2: Attach the State to the Router**
+**Benefits of This Approach:**
+- ✅ **Separation of Concerns**: Controllers only handle HTTP, use cases handle business logic
+- ✅ **Testability**: Easy to inject mock dependencies for testing
+- ✅ **Flexibility**: Can swap database implementations without changing business logic
+- ✅ **Maintainability**: Clear boundaries between layers
 
-Next, when we build our router, we use the `.with_state()` method to attach our newly created `db_pool` to it.
+### How is the State Shared? A Look at `main.rs` in Hexagonal Architecture
+
+In our hexagonal architecture, dependency injection happens during application startup in `main.rs`. Let's see how the layers are wired together:
+
+**Step 1: Create Infrastructure Components**
 
 ```rust
 // File: src/main.rs
 
+// Load configuration
+let config = Config::from_env()?;
+
+// Create database connection pool
+let db_pool = Database::connect(&config).await?;
+
+// Create repository (infrastructure → domain port)
+let task_repository: Arc<dyn TaskRepository> = 
+    Arc::new(PostgresTaskRepository::new(db_pool));
+```
+
+**Step 2: Create Application Layer**
+
+```rust
+// Create use cases (application layer)
+let task_use_cases = Arc::new(TaskUseCases::new(task_repository));
+```
+
+**Step 3: Create Web Infrastructure**
+
+```rust
+// Create controllers (infrastructure web adapter)
+let task_controller = Arc::new(TaskController::new(task_use_cases));
+```
+
+**Step 4: Attach to Router**
+
+```rust
 let app = Router::new()
-    .route("/", get(/* ... */))
-    .route("/tasks", get(get_tasks).post(create_task))
-    .route("/tasks/{task_id}", patch(update_task).delete(delete_task))
-    .with_state(db_pool); // <-- The crucial step!
+    .route("/", get(root_handler))
+    .route("/health", get(health_check))
+    .route("/tasks", 
+        get(TaskController::get_tasks)
+        .post(TaskController::create_task)
+    )
+    .with_state(task_controller); // <-- Inject the controller!
 ```
 
-This `.with_state(db_pool)` call is what makes the `db_pool` available to *all* the routes and their handlers defined in this router. It's like giving every employee a keycard when they are hired.
+This `.with_state(task_controller)` makes the controller (and all its dependencies) available to all route handlers. The beautiful thing is that each layer only knows about the layer below it, creating clean separation of concerns.
 
-### The Journey of a Request with Shared State
+### The Journey of a Request in Hexagonal Architecture
 
-Let's visualize the entire flow from request to response.
+Let's visualize the entire flow from request to response through our hexagonal architecture layers.
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant R as Axum Router
-    participant SS as Shared State (db_pool)
-    participant H as get_tasks Handler
+    participant Router as Axum Router
+    participant Controller as TaskController
+    participant UseCase as TaskUseCases  
+    participant Repo as TaskRepository
+    participant DB as PostgreSQL
 
-    User->>+R: Sends HTTP Request (GET /tasks)
-    R->>R: Finds route for `get_tasks`
-    R->>SS: Sees handler needs State, gets a reference to `db_pool`
-    R->>+H: Calls `get_tasks` and passes `db_pool` to it
-    H->>SS: Uses `db_pool` to fetch tasks from database
-    SS-->>H: Returns database results
-    H-->>-R: Returns HTTP Response (list of tasks)
-    R-->>-User: Sends Response to User
+    User->>+Router: HTTP Request (GET /tasks)
+    Router->>Router: Route to TaskController::get_tasks
+    Router->>+Controller: Inject controller state & call handler
+    Controller->>+UseCase: get_all_tasks()
+    UseCase->>+Repo: find_all()
+    Repo->>+DB: SELECT query
+    DB-->>-Repo: Task rows
+    Repo-->>-UseCase: Vec<Task> (domain entities)
+    UseCase-->>-Controller: Vec<TaskDto> (DTOs)
+    Controller-->>-Router: JSON ApiResponse
+    Router-->>-User: HTTP Response
 ```
 
-1.  A user sends a `GET /tasks` request.
-2.  The Axum Router finds the route that points to our `get_tasks` handler.
-3.  The Router inspects the `get_tasks` function signature and sees it requires `State<PgPool>`.
-4.  The Router "injects" the `db_pool` that was attached using `.with_state()` as an argument when it calls the handler.
-5.  Our `get_tasks` handler now has the `db_pool` and uses it to query the database.
-6.  The handler packages the result into an HTTP response and returns it.
+**The Flow Explained:**
 
-This architecture is both powerful and efficient. All the complex work of managing database connections is handled for us by `sqlx::PgPool`, and Axum provides a clean and simple way to access it from anywhere with `State`.
+1. **User** sends a `GET /tasks` request
+2. **Axum Router** finds the route and extracts the `TaskController` from state
+3. **TaskController** (Infrastructure/Web) handles HTTP concerns and delegates to use cases
+4. **TaskUseCases** (Application Layer) orchestrates business logic and calls repository
+5. **TaskRepository** (Infrastructure/Database) handles data persistence concerns
+6. **PostgreSQL** returns raw data
+7. **Response flows back** through the same layers, with each layer doing its specific job:
+   - Repository converts database rows to domain entities
+   - Use cases convert domain entities to DTOs
+   - Controller wraps DTOs in API response format
+
+**Key Benefits of This Flow:**
+- ✅ **Clear Responsibilities**: Each layer has one job
+- ✅ **Testable**: Each layer can be tested in isolation
+- ✅ **Flexible**: Can swap any layer implementation
+- ✅ **Maintainable**: Changes in one layer don't affect others
 
 ### Conclusion
 
-You've now learned about the "employees" of our application: the **handler functions**. You saw that they are `async` Rust functions that perform the core logic for each API route.
+You've now learned about **handler functions in hexagonal architecture**. Instead of monolithic handlers that mix HTTP concerns with business logic, we now have:
 
-Most importantly, you learned about Axum's **shared state** system and the `State` extractor. You now understand that this is a critical pattern for building efficient web services, allowing handlers to share resources like a database connection pool instead of wastefully creating new ones for every request. We give them a "keycard" (`State`) to a "shared printer" (`PgPool`), and it makes everything run much more smoothly.
+- **Infrastructure Web Adapters** (TaskController) that handle HTTP concerns
+- **Application Use Cases** that orchestrate business logic  
+- **Domain Repositories** that define data access contracts
+- **Infrastructure Database Adapters** that implement those contracts
 
-But how exactly are we talking to the database? That `sqlx::query_as!` macro looks interesting. It holds a secret power: it checks our SQL queries against the actual database *at compile time* to prevent typos and other common errors.
+Most importantly, you learned about **dependency injection** in hexagonal architecture. Instead of directly passing a database pool to handlers, we now:
 
-Ready to see how Rust can make your database queries safer? Let's move on to the next chapter: [Chapter 3: Compile-Time Verified SQL](03_compile_time_verified_sql.md).
+1. ✅ Inject repositories into use cases
+2. ✅ Inject use cases into controllers  
+3. ✅ Inject controllers into the router
+
+This creates a clean dependency chain where each layer only knows about the layer directly below it, making the system much more maintainable and testable.
+
+The **shared state** pattern still exists, but now it's used to share the entire dependency tree through the `TaskController`, rather than just a database connection.
+
+But how exactly are we talking to the database in the repository layer? The SQL queries are now isolated in the `PostgresTaskRepository`. Let's see how this works in practice.
+
+Ready to dive into the data layer? Let's move on to: [Chapter 3: Compile-Time Verified SQL](03_compile_time_verified_sql.md).
 
 ---

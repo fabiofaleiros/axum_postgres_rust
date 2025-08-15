@@ -1,5 +1,5 @@
 use serde::Serialize;
-use crate::models::Task;
+use crate::application::dto::TaskDto;
 
 /// Standard API response wrapper
 #[derive(Debug, Serialize)]
@@ -30,7 +30,7 @@ impl<T> ApiResponse<T> {
 /// Response structure for task lists
 #[derive(Debug, Serialize)]
 pub struct TaskListResponse {
-    pub tasks: Vec<Task>,
+    pub tasks: Vec<TaskDto>,
 }
 
 /// Response structure for task creation
