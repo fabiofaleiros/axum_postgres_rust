@@ -4,7 +4,7 @@ This project is a **REST API** for managing tasks, built using the *Rust program
 
 **Source Repository:** [axum_postgres_rust](https://github.com/fabiofaleiros/axum_postgres_rust)
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ```mermaid
 flowchart TB
@@ -34,40 +34,40 @@ flowchart TB
     UC --> DTO
 ```
 
-## 🎯 Key Benefits
+## Key Benefits
 
-- **🔧 Testability**: Easy to mock external dependencies via ports
-- **🔄 Flexibility**: Can swap implementations without changing business logic  
-- **📦 Modularity**: Clear separation between business logic and infrastructure
-- **🛡️ Maintainability**: Changes in one layer don't affect others
-- **⚡ Dependency Inversion**: Domain layer has no external dependencies
+- **Testability**: Easy to mock external dependencies via ports
+- **Flexibility**: Can swap implementations without changing business logic  
+- **Modularity**: Clear separation between business logic and infrastructure
+- **Maintainability**: Changes in one layer don't affect others
+- **Dependency Inversion**: Domain layer has no external dependencies
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 src/
-├── domain/              # 🏛️ Pure business logic
+├── domain/              # Pure business logic
 │   ├── entities/        # Core business entities (Task)
 │   ├── value_objects/   # Domain value objects (TaskId)
 │   ├── services/        # Domain services (validation, business rules)
 │   └── ports/          # Interface definitions (TaskRepository trait)
 │
-├── application/        # 🔄 Use cases and application logic
+├── application/        # Use cases and application logic
 │   ├── dto/            # Data transfer objects
 │   └── use_cases/      # Application use cases (TaskUseCases)
 │
-├── infrastructure/     # 🔌 External adapters
+├── infrastructure/     # External adapters
 │   ├── adapters/
 │   │   ├── repositories/  # Database implementations (PostgresTaskRepository)
 │   │   └── web/          # HTTP adapters (TaskController)
 │   └── persistence/    # Database schema and migrations
 │
-├── config/             # ⚙️ Application configuration
-├── database/           # 🗄️ Database connection management
-└── responses/          # 📝 API response structures
+├── config/             # Application configuration
+├── database/           # Database connection management
+└── responses/          # API response structures
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 1. **Clone the repository**
    ```bash
@@ -99,23 +99,23 @@ src/
      -d '{"name":"Test Task","priority":5}'
    ```
 
-## 📚 Documentation Chapters
+## Documentation Chapters
 
 ### Original Tutorial (Updated for Hexagonal Architecture)
-1. [Axum Web Router](readme_files/01_axum_web_router.md)
-2. [Handler Functions & Shared State](readme_files/02_handler_functions___shared_state.md)
-3. [Compile-Time Verified SQL](readme_files/03_compile_time_verified_sql.md)
-4. [Application Configuration](readme_files/04_application_configuration.md)
-5. [Containerized Environment](readme_files/05_containerized_environment.md)
+1. [Axum Web Router](docs/01_axum_web_router.md)
+2. [Handler Functions & Shared State](docs/02_handler_functions___shared_state.md)
+3. [Compile-Time Verified SQL](docs/03_compile_time_verified_sql.md)
+4. [Application Configuration](docs/04_application_configuration.md)
+5. [Containerized Environment](docs/05_containerized_environment.md)
 
 ### Hexagonal Architecture Deep Dive
-6. [Hexagonal Architecture Overview](readme_files/06_hexagonal_architecture.md)
-7. [Domain Layer Design](readme_files/07_domain_layer.md)
-8. [Application Layer & Use Cases](readme_files/08_application_layer.md)
-9. [Infrastructure Adapters](readme_files/09_infrastructure_adapters.md)
-10. [Dependency Injection & Testing](readme_files/10_dependency_injection_testing.md)
+6. [Hexagonal Architecture Overview](docs/06_hexagonal_architecture.md)
+7. [Domain Layer Design](docs/07_domain_layer.md)
+8. [Application Layer & Use Cases](docs/08_application_layer.md)
+9. [Infrastructure Adapters](docs/09_infrastructure_adapters.md)
+10. [Dependency Injection & Testing](docs/10_dependency_injection_testing.md)
 
-## 🔧 API Endpoints
+## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -127,5 +127,28 @@ src/
 | POST | `/tasks` | Create new task |
 | PATCH | `/tasks/{id}` | Update task |
 | DELETE | `/tasks/{id}` | Delete task |
+
+## Makefile Commands
+
+The project includes a Makefile for common development tasks:
+
+| Command | Description |
+|---------|-------------|
+| `make run-local` | Clean build, start PostgreSQL in Docker, and run the application in release mode |
+| `make run-docker` | Start both PostgreSQL and application using Docker Compose |
+| `make run-stop` | Stop all running Docker containers |
+
+### Usage Examples
+
+```bash
+# Start PostgreSQL and run application locally
+make run-local
+
+# Run everything in Docker
+make run-docker
+
+# Stop all services
+make run-stop
+```
 
 ---

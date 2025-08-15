@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use crate::application::dto::TaskDto;
 
 /// Standard API response wrapper
@@ -34,8 +34,9 @@ pub struct TaskListResponse {
 }
 
 /// Response structure for task creation
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskCreatedResponse {
     pub task_id: i32,
     pub message: String,
 }
+

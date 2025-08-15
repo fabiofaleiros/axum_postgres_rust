@@ -2,7 +2,7 @@
 
 The **Infrastructure Layer** implements the ports defined in the domain layer and handles all external concerns like databases, web frameworks, and external services.
 
-## 🔌 Structure Overview
+## Structure Overview
 
 ```
 src/infrastructure/
@@ -14,7 +14,7 @@ src/infrastructure/
 └── persistence/               # Database schema and migrations
 ```
 
-## 🗄️ Repository Adapters
+## Repository Adapters
 
 Repository adapters implement the domain's repository ports using specific database technologies.
 
@@ -58,10 +58,10 @@ impl TaskRepository for PostgresTaskRepository {
 ```
 
 **Key Characteristics:**
-- ✅ Implements the domain's `TaskRepository` trait
-- ✅ Handles database-specific concerns (SQL queries, connection pooling)
-- ✅ Converts between database rows and domain entities
-- ✅ Maps database errors to domain errors
+- Implements the domain's `TaskRepository` trait
+- Handles database-specific concerns (SQL queries, connection pooling)
+- Converts between database rows and domain entities
+- Maps database errors to domain errors
 
 ### Benefits of the Adapter Pattern
 
@@ -87,7 +87,7 @@ impl TaskRepository for PostgresTaskRepository {
    .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
    ```
 
-## 🌐 Web Adapters
+## Web Adapters
 
 Web adapters handle HTTP concerns and translate between HTTP and application layer.
 
@@ -119,10 +119,10 @@ impl TaskController {
 ```
 
 **Responsibilities:**
-- ✅ HTTP request/response handling
-- ✅ Parameter extraction and validation
-- ✅ Error translation to HTTP status codes
-- ✅ Response formatting
+- HTTP request/response handling
+- Parameter extraction and validation
+- Error translation to HTTP status codes
+- Response formatting
 
 ### Web Error Handling
 
@@ -159,11 +159,11 @@ impl axum::response::IntoResponse for WebError {
 ```
 
 **Error Translation Strategy:**
-- ✅ Application errors → HTTP status codes
-- ✅ Consistent error response format
-- ✅ No internal error details leaked to clients
+- Application errors → HTTP status codes
+- Consistent error response format
+- No internal error details leaked to clients
 
-## 🔧 Dependency Injection
+## Dependency Injection
 
 The infrastructure layer wires everything together in `main.rs`.
 
@@ -204,7 +204,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 PostgresTaskRepository → TaskUseCases → TaskController → Axum Router
 ```
 
-## 🎯 Adapter Benefits
+## Adapter Benefits
 
 ### 1. **Testability**
 ```rust
@@ -240,7 +240,7 @@ let repo: Arc<dyn TaskRepository> = match config.database_type {
 };
 ```
 
-## 🔄 Request Flow Through Adapters
+## Request Flow Through Adapters
 
 ```
 1. HTTP Request → Axum → TaskController (Web Adapter)
@@ -250,7 +250,7 @@ let repo: Arc<dyn TaskRepository> = match config.database_type {
 5. Response flows back through the same path
 ```
 
-## 🧪 Testing Adapters
+## Testing Adapters
 
 ### Integration Tests
 ```rust
@@ -278,7 +278,7 @@ async fn test_get_tasks_endpoint() {
 }
 ```
 
-## 🎨 Design Patterns in Infrastructure
+## Design Patterns in Infrastructure
 
 ### 1. **Adapter Pattern**
 - Adapts external interfaces to domain ports
@@ -296,6 +296,6 @@ async fn test_get_tasks_endpoint() {
 - Each layer translates errors appropriately
 - External errors never leak to inner layers
 
-## 🚀 Next: Dependency Injection & Testing
+## Next: Dependency Injection & Testing
 
 Continue to [Dependency Injection & Testing](10_dependency_injection_testing.md) for advanced testing strategies.

@@ -2,13 +2,13 @@
 
 This document explains the **Hexagonal Architecture** (also known as Ports and Adapters) implementation in this Rust project.
 
-## 🎯 What is Hexagonal Architecture?
+## What is Hexagonal Architecture?
 
 Hexagonal Architecture is a design pattern that aims to create loosely coupled application components that can be easily connected to their software environment through ports and adapters. This architecture divides an application into several loosely-coupled interchangeable components, such as the application core, the database, the user interface, test scripts and interfaces with other systems.
 
-## 🏗️ Architecture Layers
+## Architecture Layers
 
-### 1. Domain Layer (Core) 🏛️
+### 1. Domain Layer (Core)
 
 The **innermost layer** contains pure business logic with no external dependencies.
 
@@ -19,12 +19,12 @@ The **innermost layer** contains pure business logic with no external dependenci
 - **Ports**: Interface definitions that define contracts for external dependencies
 
 **Key Principles:**
-- ✅ No external dependencies (no database, web framework, etc.)
-- ✅ Contains pure business rules and validation
-- ✅ Defines interfaces (ports) for external needs
-- ✅ Highly testable in isolation
+- No external dependencies (no database, web framework, etc.)
+- Contains pure business rules and validation
+- Defines interfaces (ports) for external needs
+- Highly testable in isolation
 
-### 2. Application Layer 🔄
+### 2. Application Layer
 
 The **orchestration layer** that coordinates domain objects and implements use cases.
 
@@ -34,12 +34,12 @@ The **orchestration layer** that coordinates domain objects and implements use c
 - **Application Services**: Coordinate domain objects to fulfill use cases
 
 **Key Principles:**
-- ✅ Orchestrates domain objects
-- ✅ Implements application-specific business rules
-- ✅ Depends only on domain layer
-- ✅ Uses ports to communicate with infrastructure
+- Orchestrates domain objects
+- Implements application-specific business rules
+- Depends only on domain layer
+- Uses ports to communicate with infrastructure
 
-### 3. Infrastructure Layer 🔌
+### 3. Infrastructure Layer
 
 The **outermost layer** that implements the ports and handles external concerns.
 
@@ -50,12 +50,12 @@ The **outermost layer** that implements the ports and handles external concerns.
 - **Configuration**: External configuration management
 
 **Key Principles:**
-- ✅ Implements domain ports
-- ✅ Handles external dependencies (database, web, file system)
-- ✅ Depends on inner layers
-- ✅ Can be easily swapped without affecting business logic
+- Implements domain ports
+- Handles external dependencies (database, web, file system)
+- Depends on inner layers
+- Can be easily swapped without affecting business logic
 
-## 🔄 Dependency Flow
+## Dependency Flow
 
 ```
 Infrastructure → Application → Domain
@@ -65,16 +65,16 @@ Infrastructure → Application → Domain
 - **Application** depends only on **Domain**
 - **Domain** depends on nothing (pure business logic)
 
-## 🎯 Benefits in This Project
+## Benefits in This Project
 
-### 1. **Testability** 🧪
+### 1. **Testability**
 ```rust
 // Easy to test use cases with mock repositories
 let mock_repository = MockTaskRepository::new();
 let use_cases = TaskUseCases::new(Arc::new(mock_repository));
 ```
 
-### 2. **Flexibility** 🔄
+### 2. **Flexibility**
 ```rust
 // Can easily swap PostgreSQL for MongoDB or any other database
 let postgres_repo = PostgresTaskRepository::new(pool);
@@ -82,17 +82,17 @@ let mongo_repo = MongoTaskRepository::new(client);
 // Both implement the same TaskRepository trait
 ```
 
-### 3. **Maintainability** 🛠️
+### 3. **Maintainability**
 - Changes in database schema only affect the repository adapter
 - Changes in web framework only affect the web adapter
 - Business logic remains stable and unchanged
 
-### 4. **Clear Boundaries** 🎯
+### 4. **Clear Boundaries**
 - Each layer has a single responsibility
 - Easy to understand where to place new functionality
 - Prevents mixing of concerns
 
-## 🔧 Implementation Patterns
+## Implementation Patterns
 
 ### Dependency Injection
 ```rust
@@ -125,7 +125,7 @@ impl TaskRepository for PostgresTaskRepository {
 }
 ```
 
-## 🚀 Next Steps
+## Next Steps
 
 Continue reading the detailed explanations of each layer:
 

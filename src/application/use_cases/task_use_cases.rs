@@ -2,7 +2,7 @@ use std::sync::Arc;
 use crate::domain::{Task, TaskId, TaskRepository, TaskDomainService, RepositoryError};
 use crate::application::dto::{TaskDto, CreateTaskRequest, UpdateTaskRequest};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum UseCaseError {
     ValidationError(String),
     NotFound(String),
@@ -108,3 +108,4 @@ impl TaskUseCases {
         Ok(())
     }
 }
+

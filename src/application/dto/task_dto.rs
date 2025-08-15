@@ -1,20 +1,20 @@
 use serde::{Deserialize, Serialize};
 use crate::domain::{Task, TaskId};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskDto {
     pub id: i32,
     pub name: String,
     pub priority: Option<i32>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateTaskRequest {
     pub name: String,
     pub priority: Option<i32>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateTaskRequest {
     pub name: Option<String>,
     pub priority: Option<i32>,
@@ -37,3 +37,4 @@ impl TryFrom<TaskDto> for Task {
         Task::new(TaskId::new(dto.id), dto.name, dto.priority)
     }
 }
+

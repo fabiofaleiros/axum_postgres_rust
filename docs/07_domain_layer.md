@@ -2,7 +2,7 @@
 
 The **Domain Layer** is the heart of our hexagonal architecture, containing pure business logic with no external dependencies.
 
-## 🏛️ Structure Overview
+## Structure Overview
 
 ```
 src/domain/
@@ -17,7 +17,7 @@ src/domain/
         └── task_repository.rs  # Repository contract
 ```
 
-## 📦 Entities
+## Entities
 
 Entities are the core business objects that have identity and lifecycle.
 
@@ -58,12 +58,12 @@ impl Task {
 ```
 
 **Key Characteristics:**
-- ✅ Contains business validation rules
-- ✅ Encapsulates business behavior
-- ✅ Immutable creation through constructor
-- ✅ No external dependencies
+- Contains business validation rules
+- Encapsulates business behavior
+- Immutable creation through constructor
+- No external dependencies
 
-## 💎 Value Objects
+## Value Objects
 
 Value objects are immutable objects that represent domain concepts without identity.
 
@@ -85,12 +85,12 @@ impl TaskId {
 ```
 
 **Key Characteristics:**
-- ✅ Immutable
-- ✅ Equality based on value, not identity
-- ✅ Type safety (prevents mixing up IDs)
-- ✅ Lightweight and copyable
+- Immutable
+- Equality based on value, not identity
+- Type safety (prevents mixing up IDs)
+- Lightweight and copyable
 
-## 🔧 Domain Services
+## Domain Services
 
 Domain services contain business logic that doesn't naturally belong to any specific entity.
 
@@ -122,12 +122,12 @@ impl TaskDomainService {
 ```
 
 **When to Use Domain Services:**
-- ✅ Business logic that involves multiple entities
-- ✅ Validation that spans multiple objects
-- ✅ Domain calculations that don't belong to a specific entity
-- ✅ Stateless operations
+- Business logic that involves multiple entities
+- Validation that spans multiple objects
+- Domain calculations that don't belong to a specific entity
+- Stateless operations
 
-## 🔌 Ports (Interfaces)
+## Ports (Interfaces)
 
 Ports define contracts for external dependencies without knowing their implementation.
 
@@ -146,10 +146,10 @@ pub trait TaskRepository: Send + Sync {
 ```
 
 **Key Characteristics:**
-- ✅ Defines what operations are needed
-- ✅ Does not specify how they are implemented
-- ✅ Uses domain types (Task, TaskId)
-- ✅ Async-friendly for modern Rust applications
+- Defines what operations are needed
+- Does not specify how they are implemented
+- Uses domain types (Task, TaskId)
+- Async-friendly for modern Rust applications
 
 ### Domain-Specific Errors
 
@@ -163,11 +163,11 @@ pub enum RepositoryError {
 ```
 
 **Benefits:**
-- ✅ Domain-specific error types
-- ✅ No external library dependencies
-- ✅ Clear error semantics
+- Domain-specific error types
+- No external library dependencies
+- Clear error semantics
 
-## 🎯 Design Principles Applied
+## Design Principles Applied
 
 ### 1. **Single Responsibility Principle**
 Each domain object has one clear purpose:
@@ -190,7 +190,7 @@ Each domain object has one clear purpose:
 - Entities validate invariants on creation
 - Controlled mutation through business methods
 
-## 🧪 Testing Domain Logic
+## Testing Domain Logic
 
 The domain layer is easily testable in isolation:
 
@@ -222,6 +222,6 @@ mod tests {
 }
 ```
 
-## 🚀 Next: Application Layer
+## Next: Application Layer
 
 Continue to [Application Layer & Use Cases](08_application_layer.md) to see how the domain is orchestrated.

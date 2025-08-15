@@ -2,7 +2,7 @@
 
 The **Application Layer** orchestrates domain objects to fulfill specific use cases. It's the coordination layer between the domain and infrastructure.
 
-## 🔄 Structure Overview
+## Structure Overview
 
 ```
 src/application/
@@ -12,7 +12,7 @@ src/application/
     └── task_use_cases.rs  # Task business operations
 ```
 
-## 📋 Use Cases
+## Use Cases
 
 Use cases represent the application-specific business rules and coordinate domain objects to fulfill user intentions.
 
@@ -35,12 +35,12 @@ impl TaskUseCases {
 ```
 
 **Key Characteristics:**
-- ✅ Coordinates multiple domain objects
-- ✅ Implements application-specific business rules
-- ✅ Uses dependency injection for external dependencies
-- ✅ Returns application-specific errors
+- Coordinates multiple domain objects
+- Implements application-specific business rules
+- Uses dependency injection for external dependencies
+- Returns application-specific errors
 
-## 🎯 Use Case Implementation Examples
+## Use Case Implementation Examples
 
 ### 1. Get All Tasks
 
@@ -116,7 +116,7 @@ pub async fn update_task(&self, id: i32, request: UpdateTaskRequest) -> Result<(
 3. Apply changes using domain methods
 4. Persist updated entity
 
-## 📦 Data Transfer Objects (DTOs)
+## Data Transfer Objects (DTOs)
 
 DTOs are used to transfer data across layer boundaries without exposing internal domain structure.
 
@@ -168,12 +168,12 @@ pub struct UpdateTaskRequest {
 ```
 
 **Benefits of DTOs:**
-- ✅ Stable external API contracts
-- ✅ Protect internal domain model from external changes
-- ✅ Allow different representations for different contexts
-- ✅ Enable serialization/deserialization
+- Stable external API contracts
+- Protect internal domain model from external changes
+- Allow different representations for different contexts
+- Enable serialization/deserialization
 
-## 🚨 Error Handling
+## Error Handling
 
 Application layer defines its own error types that aggregate domain and infrastructure errors.
 
@@ -200,12 +200,12 @@ impl From<RepositoryError> for UseCaseError {
 ```
 
 **Error Handling Strategy:**
-- ✅ Each layer has its own error types
-- ✅ Errors are converted at layer boundaries
-- ✅ Higher layers never see lower-level error details
-- ✅ Clear error semantics for each layer
+- Each layer has its own error types
+- Errors are converted at layer boundaries
+- Higher layers never see lower-level error details
+- Clear error semantics for each layer
 
-## 🎯 Design Patterns Applied
+## Design Patterns Applied
 
 ### 1. **Use Case Pattern**
 Each use case represents a single user intention:
@@ -233,7 +233,7 @@ Data crossing layer boundaries is transformed:
 Ok(tasks.into_iter().map(TaskDto::from).collect())
 ```
 
-## 🧪 Testing Use Cases
+## Testing Use Cases
 
 Use cases can be tested with mock repositories:
 
@@ -276,7 +276,7 @@ mod tests {
 }
 ```
 
-## 🔄 Application Flow Summary
+## Application Flow Summary
 
 ```
 1. External Request → Infrastructure Layer (Web Controller)
@@ -287,6 +287,6 @@ mod tests {
 6. Response flows back through the same layers
 ```
 
-## 🚀 Next: Infrastructure Adapters
+## Next: Infrastructure Adapters
 
 Continue to [Infrastructure Adapters](09_infrastructure_adapters.md) to see how external dependencies are implemented.

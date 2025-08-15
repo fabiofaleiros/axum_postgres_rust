@@ -87,10 +87,10 @@ TaskController → TaskUseCases → TaskRepository → Database
 ```
 
 **Benefits of This Approach:**
-- ✅ **Separation of Concerns**: Controllers only handle HTTP, use cases handle business logic
-- ✅ **Testability**: Easy to inject mock dependencies for testing
-- ✅ **Flexibility**: Can swap database implementations without changing business logic
-- ✅ **Maintainability**: Clear boundaries between layers
+- **Separation of Concerns**: Controllers only handle HTTP, use cases handle business logic
+- **Testability**: Easy to inject mock dependencies for testing
+- **Flexibility**: Can swap database implementations without changing business logic
+- **Maintainability**: Clear boundaries between layers
 
 ### How is the State Shared? A Look at `main.rs` in Hexagonal Architecture
 
@@ -181,10 +181,10 @@ sequenceDiagram
    - Controller wraps DTOs in API response format
 
 **Key Benefits of This Flow:**
-- ✅ **Clear Responsibilities**: Each layer has one job
-- ✅ **Testable**: Each layer can be tested in isolation
-- ✅ **Flexible**: Can swap any layer implementation
-- ✅ **Maintainable**: Changes in one layer don't affect others
+- **Clear Responsibilities**: Each layer has one job
+- **Testable**: Each layer can be tested in isolation
+- **Flexible**: Can swap any layer implementation
+- **Maintainable**: Changes in one layer don't affect others
 
 ### Conclusion
 
@@ -197,9 +197,9 @@ You've now learned about **handler functions in hexagonal architecture**. Instea
 
 Most importantly, you learned about **dependency injection** in hexagonal architecture. Instead of directly passing a database pool to handlers, we now:
 
-1. ✅ Inject repositories into use cases
-2. ✅ Inject use cases into controllers  
-3. ✅ Inject controllers into the router
+1. Inject repositories into use cases
+2. Inject use cases into controllers  
+3. Inject controllers into the router
 
 This creates a clean dependency chain where each layer only knows about the layer directly below it, making the system much more maintainable and testable.
 

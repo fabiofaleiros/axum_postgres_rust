@@ -2,6 +2,9 @@ use async_trait::async_trait;
 use crate::domain::entities::Task;
 use crate::domain::value_objects::TaskId;
 
+#[cfg(test)]
+use mockall::automock;
+
 #[derive(Debug)]
 pub enum RepositoryError {
     NotFound(String),
@@ -22,6 +25,7 @@ impl std::fmt::Display for RepositoryError {
 impl std::error::Error for RepositoryError {}
 
 #[async_trait]
+#[cfg_attr(test, automock)]
 pub trait TaskRepository: Send + Sync {
     async fn find_all(&self) -> Result<Vec<Task>, RepositoryError>;
     async fn find_by_id(&self, id: TaskId) -> Result<Option<Task>, RepositoryError>;

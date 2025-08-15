@@ -2,7 +2,7 @@
 
 This document covers advanced dependency injection patterns and comprehensive testing strategies for hexagonal architecture.
 
-## 🔧 Dependency Injection Patterns
+## Dependency Injection Patterns
 
 ### 1. Constructor Injection
 
@@ -25,10 +25,10 @@ impl TaskUseCases {
 ```
 
 **Benefits:**
-- ✅ Dependencies are explicit and required
-- ✅ Immutable after construction
-- ✅ Compile-time dependency verification
-- ✅ Easy to test with mock objects
+- Dependencies are explicit and required
+- Immutable after construction
+- Compile-time dependency verification
+- Easy to test with mock objects
 
 ### 2. Service Locator Alternative
 
@@ -79,7 +79,7 @@ pub fn create_task_repository(config: &Config) -> Arc<dyn TaskRepository> {
 }
 ```
 
-## 🧪 Testing Strategies
+## Testing Strategies
 
 ### 1. Unit Testing Domain Layer
 
@@ -343,12 +343,12 @@ async fn test_http_endpoints() {
 }
 ```
 
-## 🎯 Testing Best Practices
+## Testing Best Practices
 
 ### 1. Test Pyramid
 
 ```
-        🔺 E2E Tests (Few)
+        ▲ E2E Tests (Few)
        /               \
       /  Integration     \
      /     Tests         \
@@ -447,7 +447,7 @@ assert_use_case_error(
 ).await;
 ```
 
-## 📊 Test Coverage
+## Test Coverage
 
 Run tests with coverage:
 
@@ -462,7 +462,7 @@ cargo tarpaulin --out Html
 open tarpaulin-report.html
 ```
 
-## 🚀 Continuous Integration
+## Continuous Integration
 
 Example GitHub Actions workflow:
 
