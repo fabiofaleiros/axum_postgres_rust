@@ -186,16 +186,11 @@ impl StatusHistoryRepository for PostgresStatusHistoryRepository {
 
         let from_status_str = history.from_status.as_ref().map(|s| s.as_str());
 
+        // Use simple INSERT without UPSERT to preserve audit trail integrity
+        // Status history records should be immutable once created
         let result = sqlx::query(
             "INSERT INTO status_history (id, task_id, from_status, to_status, changed_at, changed_by, comment, user_role)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-             ON CONFLICT (id) DO UPDATE SET
-                 from_status = EXCLUDED.from_status,
-                 to_status = EXCLUDED.to_status,
-                 changed_at = EXCLUDED.changed_at,
-                 changed_by = EXCLUDED.changed_by,
-                 comment = EXCLUDED.comment,
-                 user_role = EXCLUDED.user_role
              RETURNING id"
         )
         .bind(id)
@@ -208,7 +203,14 @@ impl StatusHistoryRepository for PostgresStatusHistoryRepository {
         .bind(history.user_role.as_str())
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| RepositoryError::DatabaseError(e.to_string()))?;
+        .map_err(|e| {
+            // Provide better error context for constraint violations
+            if e.to_string().contains("duplicate key") || e.to_string().contains("unique constraint") {
+                RepositoryError::ValidationError(format!("Status history record with ID {} already exists. Audit records are immutable.", id))
+            } else {
+                RepositoryError::DatabaseError(e.to_string())
+            }
+        })?;
 
         let saved_id: Uuid = result.get("id");
         Ok(saved_id.to_string())
