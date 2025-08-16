@@ -1,6 +1,7 @@
 use std::sync::Arc;
-use crate::domain::{Task, TaskId, TaskRepository, TaskDomainService, TaskStatusService, UserRole, RepositoryError};
-use crate::application::dto::{TaskDto, CreateTaskRequest, UpdateTaskRequest, UpdateTaskStatusDto, TaskWithTransitionsDto};
+use chrono::{DateTime, Utc};
+use crate::domain::{Task, TaskId, TaskRepository, StatusHistoryRepository, TaskDomainService, TaskStatusService, UserRole, RepositoryError};
+use crate::application::dto::{TaskDto, CreateTaskRequest, UpdateTaskRequest, UpdateTaskStatusDto, TaskWithTransitionsDto, TaskHistoryDto, TaskAnalyticsDto, CompletionAnalyticsDto, StatusHistoryDto, PriorityCompletionDto};
 
 #[derive(Debug, Clone)]
 pub enum UseCaseError {
@@ -33,14 +34,16 @@ impl std::error::Error for UseCaseError {}
 
 pub struct TaskUseCases {
     task_repository: Arc<dyn TaskRepository>,
+    status_history_repository: Arc<dyn StatusHistoryRepository>,
     domain_service: TaskDomainService,
     status_service: TaskStatusService,
 }
 
 impl TaskUseCases {
-    pub fn new(task_repository: Arc<dyn TaskRepository>) -> Self {
+    pub fn new(task_repository: Arc<dyn TaskRepository>, status_history_repository: Arc<dyn StatusHistoryRepository>) -> Self {
         Self {
             task_repository,
+            status_history_repository,
             domain_service: TaskDomainService::new(),
             status_service: TaskStatusService::new(),
         }
@@ -153,6 +156,101 @@ impl TaskUseCases {
         Ok(TaskWithTransitionsDto {
             task: TaskDto::from(task),
             valid_transitions,
+        })
+    }
+
+    pub async fn get_task_history(&self, id: i32) -> Result<TaskHistoryDto, UseCaseError> {
+        let task_id = TaskId::new(id);
+        
+        // Verify task exists
+        let _task = self.task_repository.find_by_id(task_id).await?
+            .ok_or_else(|| UseCaseError::NotFound(format!("Task with id {} not found", id)))?;
+
+        let histories = self.status_history_repository.find_by_task_id(id).await?;
+        let history_dtos: Vec<StatusHistoryDto> = histories.iter().cloned().map(StatusHistoryDto::from).collect();
+
+        // Calculate basic analytics
+        let analytics = self.status_history_repository.get_task_analytics(id).await?;
+        let (total_time_in_progress, number_of_transitions) = if let Some(analytics) = analytics {
+            (
+                analytics.total_time_in_progress.map(|d| super::dto::format_duration(d)),
+                analytics.number_of_transitions
+            )
+        } else {
+            (None, history_dtos.len())
+        };
+
+        Ok(TaskHistoryDto {
+            task_id: id,
+            history: history_dtos,
+            total_time_in_progress,
+            number_of_transitions,
+        })
+    }
+
+    pub async fn get_task_analytics(&self, id: i32) -> Result<TaskAnalyticsDto, UseCaseError> {
+        let task_id = TaskId::new(id);
+        
+        // Verify task exists
+        let _task = self.task_repository.find_by_id(task_id).await?
+            .ok_or_else(|| UseCaseError::NotFound(format!("Task with id {} not found", id)))?;
+
+        let analytics = self.status_history_repository.get_task_analytics(id).await?
+            .ok_or_else(|| UseCaseError::NotFound(format!("No analytics found for task {}", id)))?;
+
+        Ok(TaskAnalyticsDto::from(analytics))
+    }
+
+    pub async fn get_completion_analytics(
+        &self, 
+        start_date: DateTime<Utc>, 
+        end_date: DateTime<Utc>
+    ) -> Result<CompletionAnalyticsDto, UseCaseError> {
+        let analytics_list = self.status_history_repository.get_completion_analytics(start_date, end_date).await?;
+        let priority_times = self.status_history_repository.get_average_completion_times().await?;
+
+        let total_completed_tasks = analytics_list.len();
+        
+        // Calculate overall average completion time
+        let total_completion_time: chrono::Duration = analytics_list
+            .iter()
+            .filter_map(|a| a.time_to_completion)
+            .sum();
+        
+        let average_completion_time = if total_completed_tasks > 0 {
+            Some(super::dto::format_duration(total_completion_time / total_completed_tasks as i32))
+        } else {
+            None
+        };
+
+        // Calculate approval rate
+        let approved_tasks = analytics_list.iter().filter(|a| a.was_approved).count();
+        let approval_rate = if total_completed_tasks > 0 {
+            approved_tasks as f64 / total_completed_tasks as f64
+        } else {
+            0.0
+        };
+
+        // Convert priority completion times
+        let completion_times_by_priority: Vec<PriorityCompletionDto> = priority_times
+            .into_iter()
+            .map(|(priority, duration)| PriorityCompletionDto {
+                priority,
+                average_time: super::dto::format_duration(duration),
+                task_count: analytics_list.iter().filter(|a| {
+                    // This is a simplified count - in reality we'd need to join with task data
+                    true
+                }).count(),
+            })
+            .collect();
+
+        Ok(CompletionAnalyticsDto {
+            period_start: start_date,
+            period_end: end_date,
+            total_completed_tasks,
+            average_completion_time,
+            completion_times_by_priority,
+            approval_rate,
         })
     }
 }

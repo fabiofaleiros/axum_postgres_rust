@@ -7,12 +7,19 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::application::{TaskUseCases, CreateTaskRequest, UpdateTaskRequest, UpdateTaskStatusDto, TaskDto, TaskWithTransitionsDto, UseCaseError};
+use crate::application::{TaskUseCases, CreateTaskRequest, UpdateTaskRequest, UpdateTaskStatusDto, TaskDto, TaskWithTransitionsDto, TaskHistoryDto, TaskAnalyticsDto, CompletionAnalyticsDto, UseCaseError};
+use chrono::{DateTime, Utc};
 use crate::responses::{ApiResponse, TaskListResponse, TaskCreatedResponse};
 
 #[derive(Deserialize)]
 pub struct TaskQuery {
     priority: Option<i32>,
+}
+
+#[derive(Deserialize)]
+pub struct AnalyticsQuery {
+    start_date: Option<DateTime<Utc>>,
+    end_date: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug)]
@@ -131,6 +138,37 @@ impl TaskController {
     ) -> Result<Json<ApiResponse<TaskWithTransitionsDto>>, WebError> {
         let result = controller.task_use_cases.get_task_with_transitions(task_id).await?;
         let response = ApiResponse::success(result);
+        Ok(Json(response))
+    }
+
+    pub async fn get_task_history(
+        State(controller): State<Arc<TaskController>>,
+        Path(task_id): Path<i32>,
+    ) -> Result<Json<ApiResponse<TaskHistoryDto>>, WebError> {
+        let history = controller.task_use_cases.get_task_history(task_id).await?;
+        let response = ApiResponse::success(history);
+        Ok(Json(response))
+    }
+
+    pub async fn get_task_analytics(
+        State(controller): State<Arc<TaskController>>,
+        Path(task_id): Path<i32>,
+    ) -> Result<Json<ApiResponse<TaskAnalyticsDto>>, WebError> {
+        let analytics = controller.task_use_cases.get_task_analytics(task_id).await?;
+        let response = ApiResponse::success(analytics);
+        Ok(Json(response))
+    }
+
+    pub async fn get_completion_analytics(
+        State(controller): State<Arc<TaskController>>,
+        Query(params): Query<AnalyticsQuery>,
+    ) -> Result<Json<ApiResponse<CompletionAnalyticsDto>>, WebError> {
+        // Default to last 30 days if no dates provided
+        let end_date = params.end_date.unwrap_or_else(|| Utc::now());
+        let start_date = params.start_date.unwrap_or_else(|| end_date - chrono::Duration::days(30));
+
+        let analytics = controller.task_use_cases.get_completion_analytics(start_date, end_date).await?;
+        let response = ApiResponse::success(analytics);
         Ok(Json(response))
     }
 }
