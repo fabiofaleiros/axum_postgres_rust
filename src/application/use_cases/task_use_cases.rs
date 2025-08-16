@@ -173,7 +173,7 @@ impl TaskUseCases {
         let analytics = self.status_history_repository.get_task_analytics(id).await?;
         let (total_time_in_progress, number_of_transitions) = if let Some(analytics) = analytics {
             (
-                analytics.total_time_in_progress.map(|d| super::dto::format_duration(d)),
+                analytics.total_time_in_progress.map(|d| crate::application::dto::format_duration(d)),
                 analytics.number_of_transitions
             )
         } else {
@@ -218,7 +218,7 @@ impl TaskUseCases {
             .sum();
         
         let average_completion_time = if total_completed_tasks > 0 {
-            Some(super::dto::format_duration(total_completion_time / total_completed_tasks as i32))
+            Some(crate::application::dto::format_duration(total_completion_time / total_completed_tasks as i32))
         } else {
             None
         };
@@ -249,7 +249,7 @@ impl TaskUseCases {
             
             completion_times_by_priority.push(PriorityCompletionDto {
                 priority,
-                average_time: super::dto::format_duration(duration),
+                average_time: crate::application::dto::format_duration(duration),
                 task_count,
             });
         }

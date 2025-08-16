@@ -1,5 +1,5 @@
 use axum::{
-    routing::get,
+    routing::{get, patch},
     Json, Router,
 };
 use serde_json::json;
@@ -18,9 +18,9 @@ mod responses;
 use config::Config;
 use database::Database;
 use std::sync::Arc;
-use domain::TaskRepository;
+use domain::{TaskRepository, StatusHistoryRepository};
 use application::TaskUseCases;
-use infrastructure::adapters::{PostgresTaskRepository, TaskController};
+use infrastructure::adapters::{PostgresTaskRepository, PostgresStatusHistoryRepository, TaskController};
 use tracing_subscriber::fmt::init;
 
 #[tokio::main]
@@ -34,11 +34,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create database connection pool
     let db_pool = Database::connect(&config).await?;
 
-    // Create repository
-    let task_repository: Arc<dyn TaskRepository> = Arc::new(PostgresTaskRepository::new(db_pool));
+    // Create repositories
+    let task_repository: Arc<dyn TaskRepository> = Arc::new(PostgresTaskRepository::new(db_pool.clone()));
+    let status_history_repository: Arc<dyn StatusHistoryRepository> = Arc::new(PostgresStatusHistoryRepository::new(db_pool));
     
     // Create use cases
-    let task_use_cases = Arc::new(TaskUseCases::new(task_repository));
+    let task_use_cases = Arc::new(TaskUseCases::new(task_repository, status_history_repository));
     
     // Create controllers
     let task_controller = Arc::new(TaskController::new(task_use_cases));
@@ -59,6 +60,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             get(TaskController::get_task)
             .patch(TaskController::update_task)
             .delete(TaskController::delete_task)
+        )
+        .route("/tasks/{task_id}/status", 
+            patch(TaskController::update_task_status)
+        )
+        .route("/tasks/{task_id}/transitions", 
+            get(TaskController::get_task_with_transitions)
+        )
+        .route("/tasks/{task_id}/history", 
+            get(TaskController::get_task_history)
+        )
+        .route("/tasks/{task_id}/analytics", 
+            get(TaskController::get_task_analytics)
         )
         .layer(
             ServiceBuilder::new()

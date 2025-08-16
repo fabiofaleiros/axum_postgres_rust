@@ -1,6 +1,8 @@
 use axum_postgres_rust::infrastructure::adapters::web::task_controller::WebError;
 use axum_postgres_rust::application::use_cases::task_use_cases::UseCaseError;
 use axum_postgres_rust::application::dto::{TaskDto, CreateTaskRequest, UpdateTaskRequest};
+use axum_postgres_rust::domain::TaskStatus;
+use chrono::Utc;
 use axum_postgres_rust::responses::{TaskListResponse, TaskCreatedResponse};
 use serde_json;
 
@@ -9,6 +11,9 @@ fn create_test_dto(id: i32, name: &str, priority: Option<i32>) -> TaskDto {
         id,
         name: name.to_string(),
         priority,
+        status: TaskStatus::Pending,
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
     }
 }
 

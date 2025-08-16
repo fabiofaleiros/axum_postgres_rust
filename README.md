@@ -97,6 +97,17 @@ src/
    curl -X POST http://127.0.0.1:7878/tasks \
      -H "Content-Type: application/json" \
      -d '{"name":"Test Task","priority":5}'
+   
+   # Update task status
+   curl -X PATCH http://127.0.0.1:7878/tasks/1/status \
+     -H "Content-Type: application/json" \
+     -d '{"status":"InProgress","comment":"Starting work"}'
+   
+   # Get valid transitions for a task
+   curl http://127.0.0.1:7878/tasks/1/transitions
+   
+   # Get task history
+   curl http://127.0.0.1:7878/tasks/1/history
    ```
 
 ## Documentation Chapters
@@ -125,8 +136,12 @@ src/
 | GET | `/tasks?priority=N` | Filter tasks by priority |
 | GET | `/tasks/{id}` | Get task by ID |
 | POST | `/tasks` | Create new task |
-| PATCH | `/tasks/{id}` | Update task |
+| PATCH | `/tasks/{id}` | Update task (name, priority) |
 | DELETE | `/tasks/{id}` | Delete task |
+| PATCH | `/tasks/{id}/status` | Update task status |
+| GET | `/tasks/{id}/transitions` | Get valid status transitions for task |
+| GET | `/tasks/{id}/history` | Get task status change history |
+| GET | `/tasks/{id}/analytics` | Get task completion analytics |
 
 ## Makefile Commands
 

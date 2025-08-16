@@ -12,11 +12,27 @@ RUN cargo build --release
 # Remove the dummy file and copy the real source code
 RUN rm -rf src
 COPY src ./src
+COPY tests ./tests
 COPY .sqlx ./.sqlx
 COPY .env ./.env
 
 # Build the application with cached dependencies
 RUN cargo build --release
+
+# Test stage - runs all tests
+FROM builder as test
+
+# Install additional test dependencies if needed
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables for testing
+ENV DATABASE_URL=postgres://test_user:test_pass@localhost:5432/test_db
+ENV RUST_LOG=debug
+
+# Run all tests
+RUN cargo test --verbose
 
 FROM debian:bookworm-slim
 

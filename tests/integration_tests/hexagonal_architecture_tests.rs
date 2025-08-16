@@ -1,10 +1,11 @@
 use axum_postgres_rust::{
-    domain::{Task, TaskId, TaskRepository, RepositoryError},
+    domain::{Task, TaskId, TaskRepository, StatusHistoryRepository, RepositoryError, StatusHistory, TaskStatus},
     application::{TaskUseCases, TaskDto, CreateTaskRequest, UpdateTaskRequest, UseCaseError},
     responses::{ApiResponse, TaskListResponse, TaskCreatedResponse},
 };
 use std::sync::Arc;
 use async_trait::async_trait;
+use chrono::Utc;
 
 // Mock repository for integration testing
 #[derive(Clone)]
@@ -59,12 +60,59 @@ impl TaskRepository for MockRepository {
     }
 }
 
+// Mock status history repository for integration testing
+#[derive(Clone)]
+struct MockStatusHistoryRepository;
+
+#[async_trait]
+impl StatusHistoryRepository for MockStatusHistoryRepository {
+    async fn find_by_task_id(&self, _task_id: i32) -> Result<Vec<StatusHistory>, RepositoryError> {
+        Ok(vec![])
+    }
+    
+    async fn find_by_date_range(
+        &self, 
+        _start_date: chrono::DateTime<chrono::Utc>, 
+        _end_date: chrono::DateTime<chrono::Utc>
+    ) -> Result<Vec<StatusHistory>, RepositoryError> {
+        Ok(vec![])
+    }
+    
+    async fn find_latest_by_task_id(&self, _task_id: i32) -> Result<Option<StatusHistory>, RepositoryError> {
+        Ok(None)
+    }
+    
+    async fn get_task_analytics(&self, _task_id: i32) -> Result<Option<axum_postgres_rust::domain::TaskAnalytics>, RepositoryError> {
+        Ok(None)
+    }
+    
+    async fn get_completion_analytics(
+        &self, 
+        _start_date: chrono::DateTime<chrono::Utc>, 
+        _end_date: chrono::DateTime<chrono::Utc>
+    ) -> Result<Vec<axum_postgres_rust::domain::TaskAnalytics>, RepositoryError> {
+        Ok(vec![])
+    }
+    
+    async fn get_average_completion_times(&self) -> Result<Vec<(i32, chrono::Duration)>, RepositoryError> {
+        Ok(vec![])
+    }
+    
+    async fn save(&self, _history: &StatusHistory) -> Result<String, RepositoryError> {
+        Ok("mock-id".to_string())
+    }
+    
+    async fn delete(&self, _id: String) -> Result<(), RepositoryError> {
+        Ok(())
+    }
+}
+
 fn create_test_task(id: i32, name: &str, priority: Option<i32>) -> Task {
     Task::new(TaskId::new(id), name.to_string(), priority).unwrap()
 }
 
 fn create_use_cases_with_mock(mock_repo: MockRepository) -> TaskUseCases {
-    TaskUseCases::new(Arc::new(mock_repo))
+    TaskUseCases::new(Arc::new(mock_repo), Arc::new(MockStatusHistoryRepository))
 }
 
 #[cfg(test)]
@@ -251,6 +299,9 @@ mod tests {
             id: 1,
             name: "API Test".to_string(),
             priority: Some(5),
+            status: TaskStatus::Pending,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
         };
 
         let success_response = ApiResponse::success(task_dto);
@@ -266,8 +317,8 @@ mod tests {
 
         // Test task list response
         let tasks = vec![
-            TaskDto { id: 1, name: "Task 1".to_string(), priority: Some(1) },
-            TaskDto { id: 2, name: "Task 2".to_string(), priority: Some(2) },
+            TaskDto { id: 1, name: "Task 1".to_string(), priority: Some(1), status: TaskStatus::Pending, created_at: Utc::now(), updated_at: Utc::now() },
+            TaskDto { id: 2, name: "Task 2".to_string(), priority: Some(2), status: TaskStatus::Pending, created_at: Utc::now(), updated_at: Utc::now() },
         ];
 
         let list_response = TaskListResponse { tasks };
@@ -417,7 +468,7 @@ mod tests {
         ]);
 
         // 2. Application Layer: Create use cases
-        let use_cases = TaskUseCases::new(Arc::new(repository));
+        let use_cases = TaskUseCases::new(Arc::new(repository), Arc::new(MockStatusHistoryRepository));
 
         // 3. Application Layer: Execute business logic
         let all_tasks = use_cases.get_all_tasks().await?;

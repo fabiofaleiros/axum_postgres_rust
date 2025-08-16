@@ -1,5 +1,6 @@
 use axum_postgres_rust::application::dto::{TaskDto, CreateTaskRequest, UpdateTaskRequest};
-use axum_postgres_rust::domain::{Task, TaskId};
+use axum_postgres_rust::domain::{Task, TaskId, TaskStatus};
+use chrono::Utc;
 use serde_json;
 
 fn create_test_task(id: i32, name: &str, priority: Option<i32>) -> Task {
@@ -36,6 +37,9 @@ mod tests {
             id: 3,
             name: "Valid Task".to_string(),
             priority: Some(7),
+            status: TaskStatus::Pending,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
         };
 
         let task = Task::try_from(dto).unwrap();
@@ -50,6 +54,9 @@ mod tests {
             id: 4,
             name: "".to_string(), // Invalid empty name
             priority: Some(3),
+            status: TaskStatus::Pending,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
         };
 
         let result = Task::try_from(dto);
@@ -63,6 +70,9 @@ mod tests {
             id: 5,
             name: "Valid Name".to_string(),
             priority: Some(11), // Invalid priority
+            status: TaskStatus::Pending,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
         };
 
         let result = Task::try_from(dto);
@@ -76,6 +86,9 @@ mod tests {
             id: 1,
             name: "Serialization Test".to_string(),
             priority: Some(8),
+            status: TaskStatus::Pending,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
         };
 
         let serialized = serde_json::to_string(&dto).unwrap();
@@ -86,12 +99,13 @@ mod tests {
 
     #[test]
     fn test_task_dto_deserialization() {
-        let json = r#"{"id":2,"name":"Deserialization Test","priority":6}"#;
+        let json = r#"{"id":2,"name":"Deserialization Test","priority":6,"status":"Pending","created_at":"2023-01-01T00:00:00Z","updated_at":"2023-01-01T00:00:00Z"}"#;
         let dto: TaskDto = serde_json::from_str(json).unwrap();
 
         assert_eq!(dto.id, 2);
         assert_eq!(dto.name, "Deserialization Test");
         assert_eq!(dto.priority, Some(6));
+        assert_eq!(dto.status, TaskStatus::Pending);
     }
 
     #[test]
@@ -100,6 +114,9 @@ mod tests {
             id: 3,
             name: "No Priority".to_string(),
             priority: None,
+            status: TaskStatus::Pending,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
         };
 
         let serialized = serde_json::to_string(&dto).unwrap();
@@ -232,6 +249,9 @@ mod tests {
             id: 100,
             name: "Roundtrip Equality Test".to_string(),
             priority: Some(5),
+            status: TaskStatus::Pending,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
         };
 
         let serialized = serde_json::to_string(&dto).unwrap();
