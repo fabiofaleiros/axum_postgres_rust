@@ -1,4 +1,4 @@
-use crate::domain::value_objects::{TaskId, TaskStatus};
+use crate::domain::value_objects::{TaskId, TaskStatus, UserRole};
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -110,6 +110,33 @@ impl Task {
         Ok(())
     }
 
+    pub fn complete_with_role(&mut self, user_role: &UserRole) -> Result<(), String> {
+        match (self.status(), self.is_high_priority()) {
+            // Low priority tasks can be completed directly
+            (TaskStatus::InProgress, false) => {
+                self.status = TaskStatus::Completed;
+                self.updated_at = Utc::now();
+                Ok(())
+            }
+            // High priority tasks need review first
+            (TaskStatus::InProgress, true) => {
+                self.status = TaskStatus::PendingReview;
+                self.updated_at = Utc::now();
+                Ok(())
+            }
+            // Only managers can approve from review
+            (TaskStatus::PendingReview, _) if user_role.can_approve() => {
+                self.status = TaskStatus::Completed;
+                self.updated_at = Utc::now();
+                Ok(())
+            }
+            (TaskStatus::PendingReview, _) => {
+                Err("Only managers can approve task completion".to_string())
+            }
+            _ => Err("Cannot complete task in current status".to_string()),
+        }
+    }
+
     pub fn approve_completion(&mut self) -> Result<(), String> {
         if self.status != TaskStatus::PendingReview {
             return Err("Can only approve tasks in PendingReview status".to_string());
@@ -144,6 +171,26 @@ impl Task {
                     self.complete()
                 }
             },
+            TaskStatus::PendingReview => {
+                if self.is_high_priority() && self.status == TaskStatus::InProgress {
+                    self.complete()
+                } else {
+                    Err("Only high-priority tasks can transition to PendingReview".to_string())
+                }
+            },
+            TaskStatus::Cancelled => self.cancel(),
+            _ => Err("Invalid status transition".to_string()),
+        }
+    }
+
+    pub fn transition_to_with_role(&mut self, new_status: TaskStatus, user_role: &UserRole) -> Result<(), String> {
+        if !self.status.can_transition_to(&new_status) {
+            return Err(format!("Invalid transition from {:?} to {:?}", self.status, new_status));
+        }
+        
+        match new_status {
+            TaskStatus::InProgress => self.start_progress(),
+            TaskStatus::Completed => self.complete_with_role(user_role),
             TaskStatus::PendingReview => {
                 if self.is_high_priority() && self.status == TaskStatus::InProgress {
                     self.complete()

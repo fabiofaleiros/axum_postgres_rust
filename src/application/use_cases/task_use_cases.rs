@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use crate::domain::{Task, TaskId, TaskRepository, TaskDomainService, RepositoryError};
+use crate::domain::{Task, TaskId, TaskRepository, TaskDomainService, TaskStatusService, UserRole, RepositoryError};
 use crate::application::dto::{TaskDto, CreateTaskRequest, UpdateTaskRequest, UpdateTaskStatusDto, TaskWithTransitionsDto};
 
 #[derive(Debug, Clone)]
@@ -34,6 +34,7 @@ impl std::error::Error for UseCaseError {}
 pub struct TaskUseCases {
     task_repository: Arc<dyn TaskRepository>,
     domain_service: TaskDomainService,
+    status_service: TaskStatusService,
 }
 
 impl TaskUseCases {
@@ -41,6 +42,7 @@ impl TaskUseCases {
         Self {
             task_repository,
             domain_service: TaskDomainService::new(),
+            status_service: TaskStatusService::new(),
         }
     }
 
@@ -113,8 +115,19 @@ impl TaskUseCases {
         let mut task = self.task_repository.find_by_id(task_id).await?
             .ok_or_else(|| UseCaseError::NotFound(format!("Task with id {} not found", id)))?;
 
-        // Apply the status transition
-        task.transition_to(request.status).map_err(UseCaseError::ValidationError)?;
+        // For now, default to User role. TODO: Extract from JWT token
+        let user_role = UserRole::User;
+
+        // Validate the transition using the status service
+        self.status_service.can_transition(
+            task.status(),
+            &request.status,
+            task.is_high_priority(),
+            &user_role,
+        ).map_err(UseCaseError::ValidationError)?;
+
+        // Apply the status transition with role validation
+        task.transition_to_with_role(request.status, &user_role).map_err(UseCaseError::ValidationError)?;
 
         // Save the updated task
         self.task_repository.update(&task).await?;
@@ -127,31 +140,20 @@ impl TaskUseCases {
         let task = self.task_repository.find_by_id(task_id).await?
             .ok_or_else(|| UseCaseError::NotFound(format!("Task with id {} not found", id)))?;
 
-        // For Phase 1, we'll provide basic transitions
-        // TODO: In Phase 2, this will be enhanced with user roles and business rules
-        let valid_transitions = self.get_valid_transitions_for_task(&task);
+        // For now, default to User role. TODO: Extract from JWT token
+        let user_role = UserRole::User;
+
+        // Use the status service to get valid transitions based on business rules
+        let valid_transitions = self.status_service.get_valid_transitions(
+            task.status(),
+            task.is_high_priority(),
+            &user_role,
+        );
 
         Ok(TaskWithTransitionsDto {
             task: TaskDto::from(task),
             valid_transitions,
         })
-    }
-
-    fn get_valid_transitions_for_task(&self, task: &Task) -> Vec<crate::domain::TaskStatus> {
-        use crate::domain::TaskStatus;
-        
-        match task.status() {
-            TaskStatus::Pending => vec![TaskStatus::InProgress, TaskStatus::Cancelled],
-            TaskStatus::InProgress => {
-                if task.is_high_priority() {
-                    vec![TaskStatus::PendingReview, TaskStatus::Cancelled]
-                } else {
-                    vec![TaskStatus::Completed, TaskStatus::Cancelled]
-                }
-            },
-            TaskStatus::PendingReview => vec![TaskStatus::Completed, TaskStatus::Cancelled],
-            TaskStatus::Completed | TaskStatus::Cancelled => vec![],
-        }
     }
 }
 
