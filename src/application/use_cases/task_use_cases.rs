@@ -231,18 +231,28 @@ impl TaskUseCases {
             0.0
         };
 
-        // Convert priority completion times
-        let completion_times_by_priority: Vec<PriorityCompletionDto> = priority_times
-            .into_iter()
-            .map(|(priority, duration)| PriorityCompletionDto {
+        // Convert priority completion times with proper task counting
+        let mut completion_times_by_priority: Vec<PriorityCompletionDto> = Vec::new();
+        
+        for (priority, duration) in priority_times {
+            // Get the actual count of completed tasks for this priority
+            // We need to query tasks by priority and check which ones are in our analytics list
+            let tasks_for_priority = self.task_repository.find_by_priority(priority).await?;
+            let task_ids_for_priority: std::collections::HashSet<i32> = tasks_for_priority
+                .into_iter()
+                .map(|task| task.id.value())
+                .collect();
+            
+            let task_count = analytics_list.iter()
+                .filter(|analytics| task_ids_for_priority.contains(&analytics.task_id))
+                .count();
+            
+            completion_times_by_priority.push(PriorityCompletionDto {
                 priority,
                 average_time: super::dto::format_duration(duration),
-                task_count: analytics_list.iter().filter(|a| {
-                    // This is a simplified count - in reality we'd need to join with task data
-                    true
-                }).count(),
-            })
-            .collect();
+                task_count,
+            });
+        }
 
         Ok(CompletionAnalyticsDto {
             period_start: start_date,
