@@ -1,4 +1,5 @@
-use axum_postgres_rust::domain::{Task, TaskId};
+use axum_postgres_rust::domain::{Task, TaskId, TaskStatus};
+use chrono::Utc;
 
 #[allow(dead_code)]
 fn create_test_task(id: i32, name: &str, priority: Option<i32>) -> Task {
@@ -209,5 +210,178 @@ mod tests {
         assert!(debug_output.contains("Task"));
         assert!(debug_output.contains("Debug task"));
         assert!(debug_output.contains("7"));
+    }
+
+    // ===== STATUS TRANSITION TESTS =====
+
+    #[test]
+    fn test_new_task_has_pending_status() {
+        let task_id = TaskId::new(1);
+        let task = Task::new(task_id, "Test Task".to_string(), Some(5)).unwrap();
+        
+        assert_eq!(*task.status(), TaskStatus::Pending);
+        assert_eq!(task.name, "Test Task");
+        assert_eq!(task.priority, Some(5));
+    }
+
+    #[test]
+    fn test_start_progress_from_pending() {
+        let task_id = TaskId::new(1);
+        let mut task = Task::new(task_id, "Test Task".to_string(), Some(5)).unwrap();
+        
+        let result = task.start_progress();
+        assert!(result.is_ok());
+        assert_eq!(*task.status(), TaskStatus::InProgress);
+    }
+
+    #[test]
+    fn test_cannot_start_progress_from_completed() {
+        let task_id = TaskId::new(1);
+        let mut task = Task::new_with_status(
+            task_id, 
+            "Test Task".to_string(), 
+            Some(5), 
+            TaskStatus::Completed, 
+            Utc::now(), 
+            Utc::now()
+        ).unwrap();
+        
+        let result = task.start_progress();
+        assert!(result.is_err());
+        assert_eq!(*task.status(), TaskStatus::Completed);
+    }
+
+    #[test]
+    fn test_low_priority_task_completion() {
+        let task_id = TaskId::new(1);
+        let mut task = Task::new_with_status(
+            task_id, 
+            "Test Task".to_string(), 
+            Some(5), 
+            TaskStatus::InProgress, 
+            Utc::now(), 
+            Utc::now()
+        ).unwrap();
+        
+        let result = task.complete();
+        assert!(result.is_ok());
+        assert_eq!(*task.status(), TaskStatus::Completed);
+    }
+
+    #[test]
+    fn test_high_priority_task_requires_review() {
+        let task_id = TaskId::new(1);
+        let mut task = Task::new_with_status(
+            task_id, 
+            "Test Task".to_string(), 
+            Some(2), // High priority
+            TaskStatus::InProgress, 
+            Utc::now(), 
+            Utc::now()
+        ).unwrap();
+        
+        let result = task.complete();
+        assert!(result.is_ok());
+        assert_eq!(*task.status(), TaskStatus::PendingReview);
+    }
+
+    #[test]
+    fn test_approve_completion() {
+        let task_id = TaskId::new(1);
+        let mut task = Task::new_with_status(
+            task_id, 
+            "Test Task".to_string(), 
+            Some(2), 
+            TaskStatus::PendingReview, 
+            Utc::now(), 
+            Utc::now()
+        ).unwrap();
+        
+        let result = task.approve_completion();
+        assert!(result.is_ok());
+        assert_eq!(*task.status(), TaskStatus::Completed);
+    }
+
+    #[test]
+    fn test_cancel_task() {
+        let task_id = TaskId::new(1);
+        let mut task = Task::new(task_id, "Test Task".to_string(), Some(5)).unwrap();
+        
+        let result = task.cancel();
+        assert!(result.is_ok());
+        assert_eq!(*task.status(), TaskStatus::Cancelled);
+    }
+
+    #[test]
+    fn test_cannot_cancel_completed_task() {
+        let task_id = TaskId::new(1);
+        let mut task = Task::new_with_status(
+            task_id, 
+            "Test Task".to_string(), 
+            Some(5), 
+            TaskStatus::Completed, 
+            Utc::now(), 
+            Utc::now()
+        ).unwrap();
+        
+        let result = task.cancel();
+        assert!(result.is_err());
+        assert_eq!(*task.status(), TaskStatus::Completed);
+    }
+
+    #[test]
+    fn test_is_high_priority() {
+        let task_id = TaskId::new(1);
+        let high_priority_task = Task::new(task_id, "High Priority".to_string(), Some(1)).unwrap();
+        let low_priority_task = Task::new(TaskId::new(2), "Low Priority".to_string(), Some(8)).unwrap();
+        
+        assert!(high_priority_task.is_high_priority());
+        assert!(!low_priority_task.is_high_priority());
+    }
+
+    #[test]
+    fn test_transition_to_method() {
+        let task_id = TaskId::new(1);
+        let mut task = Task::new(task_id, "Test Task".to_string(), Some(5)).unwrap();
+        
+        // Valid transition
+        let result = task.transition_to(TaskStatus::InProgress);
+        assert!(result.is_ok());
+        assert_eq!(*task.status(), TaskStatus::InProgress);
+        
+        // Invalid transition
+        let result = task.transition_to(TaskStatus::PendingReview);
+        assert!(result.is_err());
+        assert_eq!(*task.status(), TaskStatus::InProgress);
+    }
+
+    #[test]
+    fn test_update_name_updates_timestamp() {
+        let task_id = TaskId::new(1);
+        let mut task = Task::new(task_id, "Original name".to_string(), Some(5)).unwrap();
+        let original_updated_at = task.updated_at;
+        
+        // Wait a small amount to ensure timestamp changes
+        std::thread::sleep(std::time::Duration::from_millis(1));
+        
+        let result = task.update_name("New name".to_string());
+        assert!(result.is_ok());
+        assert_ne!(task.updated_at, original_updated_at);
+        assert!(task.updated_at > original_updated_at);
+    }
+
+    #[test]
+    fn test_update_priority_updates_timestamp() {
+        let task_id = TaskId::new(1);
+        let mut task = Task::new(task_id, "Task name".to_string(), Some(5)).unwrap();
+        let original_updated_at = task.updated_at;
+        
+        // Wait a small amount to ensure timestamp changes
+        std::thread::sleep(std::time::Duration::from_millis(1));
+        
+        let result = task.update_priority(Some(8));
+        assert!(result.is_ok());
+        assert_ne!(task.updated_at, original_updated_at);
+        assert!(task.updated_at > original_updated_at);
     }
 }

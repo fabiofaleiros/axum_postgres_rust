@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use crate::domain::{Task, TaskId, TaskRepository, TaskDomainService, RepositoryError};
-use crate::application::dto::{TaskDto, CreateTaskRequest, UpdateTaskRequest};
+use crate::application::dto::{TaskDto, CreateTaskRequest, UpdateTaskRequest, UpdateTaskStatusDto, TaskWithTransitionsDto};
 
 #[derive(Debug, Clone)]
 pub enum UseCaseError {
@@ -106,6 +106,52 @@ impl TaskUseCases {
 
         self.task_repository.delete(task_id).await?;
         Ok(())
+    }
+
+    pub async fn update_task_status(&self, id: i32, request: UpdateTaskStatusDto) -> Result<TaskDto, UseCaseError> {
+        let task_id = TaskId::new(id);
+        let mut task = self.task_repository.find_by_id(task_id).await?
+            .ok_or_else(|| UseCaseError::NotFound(format!("Task with id {} not found", id)))?;
+
+        // Apply the status transition
+        task.transition_to(request.status).map_err(UseCaseError::ValidationError)?;
+
+        // Save the updated task
+        self.task_repository.update(&task).await?;
+        
+        Ok(TaskDto::from(task))
+    }
+
+    pub async fn get_task_with_transitions(&self, id: i32) -> Result<TaskWithTransitionsDto, UseCaseError> {
+        let task_id = TaskId::new(id);
+        let task = self.task_repository.find_by_id(task_id).await?
+            .ok_or_else(|| UseCaseError::NotFound(format!("Task with id {} not found", id)))?;
+
+        // For Phase 1, we'll provide basic transitions
+        // TODO: In Phase 2, this will be enhanced with user roles and business rules
+        let valid_transitions = self.get_valid_transitions_for_task(&task);
+
+        Ok(TaskWithTransitionsDto {
+            task: TaskDto::from(task),
+            valid_transitions,
+        })
+    }
+
+    fn get_valid_transitions_for_task(&self, task: &Task) -> Vec<crate::domain::TaskStatus> {
+        use crate::domain::TaskStatus;
+        
+        match task.status() {
+            TaskStatus::Pending => vec![TaskStatus::InProgress, TaskStatus::Cancelled],
+            TaskStatus::InProgress => {
+                if task.is_high_priority() {
+                    vec![TaskStatus::PendingReview, TaskStatus::Cancelled]
+                } else {
+                    vec![TaskStatus::Completed, TaskStatus::Cancelled]
+                }
+            },
+            TaskStatus::PendingReview => vec![TaskStatus::Completed, TaskStatus::Cancelled],
+            TaskStatus::Completed | TaskStatus::Cancelled => vec![],
+        }
     }
 }
 

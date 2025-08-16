@@ -7,7 +7,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::application::{TaskUseCases, CreateTaskRequest, UpdateTaskRequest, TaskDto, UseCaseError};
+use crate::application::{TaskUseCases, CreateTaskRequest, UpdateTaskRequest, UpdateTaskStatusDto, TaskDto, TaskWithTransitionsDto, UseCaseError};
 use crate::responses::{ApiResponse, TaskListResponse, TaskCreatedResponse};
 
 #[derive(Deserialize)]
@@ -113,6 +113,25 @@ impl TaskController {
         
         let response = ApiResponse::success(data);
         Ok((StatusCode::NO_CONTENT, Json(response)))
+    }
+
+    pub async fn update_task_status(
+        State(controller): State<Arc<TaskController>>,
+        Path(task_id): Path<i32>,
+        Json(request): Json<UpdateTaskStatusDto>,
+    ) -> Result<Json<ApiResponse<TaskDto>>, WebError> {
+        let task = controller.task_use_cases.update_task_status(task_id, request).await?;
+        let response = ApiResponse::success(task);
+        Ok(Json(response))
+    }
+
+    pub async fn get_task_with_transitions(
+        State(controller): State<Arc<TaskController>>,
+        Path(task_id): Path<i32>,
+    ) -> Result<Json<ApiResponse<TaskWithTransitionsDto>>, WebError> {
+        let result = controller.task_use_cases.get_task_with_transitions(task_id).await?;
+        let response = ApiResponse::success(result);
+        Ok(Json(response))
     }
 }
 
