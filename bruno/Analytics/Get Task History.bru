@@ -1,0 +1,36 @@
+meta {
+  name: Get Task History
+  type: http
+  seq: 16
+}
+
+get {
+  url: {{base_url}}/tasks/{{task_id}}/history
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Should return task history", function() {
+    const jsonData = res.getBody();
+    expect(jsonData).to.have.property('data');
+    expect(jsonData.data).to.be.an('array');
+  });
+  
+  test("History entries should have required fields", function() {
+    const jsonData = res.getBody();
+    if (jsonData.data.length > 0) {
+      const historyEntry = jsonData.data[0];
+      expect(historyEntry).to.have.property('id');
+      expect(historyEntry).to.have.property('task_id');
+      expect(historyEntry).to.have.property('to_status');
+      expect(historyEntry).to.have.property('changed_at');
+      expect(historyEntry).to.have.property('changed_by');
+      expect(historyEntry).to.have.property('user_role');
+    }
+  });
+}

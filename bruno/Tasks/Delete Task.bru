@@ -1,0 +1,22 @@
+meta {
+  name: Delete Task
+  type: http
+  seq: 9
+}
+
+delete {
+  url: {{base_url}}/tasks/{{task_id}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status should be 204", function() {
+    expect(res.getStatus()).to.equal(204);
+  });
+  
+  test("Should confirm deletion", function() {
+    const jsonData = res.getBody();
+    expect(jsonData).to.have.property('message');
+  });
+}

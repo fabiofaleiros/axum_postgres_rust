@@ -1,0 +1,29 @@
+meta {
+  name: Get Average Completion Times by Priority
+  type: http
+  seq: 19
+}
+
+get {
+  url: {{base_url}}/analytics/completion-times
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Should return completion times by priority", function() {
+    const jsonData = res.getBody();
+    expect(jsonData).to.have.property('data');
+    expect(jsonData.data).to.be.an('array');
+    
+    if (jsonData.data.length > 0) {
+      const timeData = jsonData.data[0];
+      expect(timeData).to.have.property('priority');
+      expect(timeData).to.have.property('average_completion_time');
+    }
+  });
+}

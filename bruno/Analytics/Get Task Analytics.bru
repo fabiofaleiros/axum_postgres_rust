@@ -1,0 +1,29 @@
+meta {
+  name: Get Task Analytics
+  type: http
+  seq: 17
+}
+
+get {
+  url: {{base_url}}/tasks/{{task_id}}/analytics
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Should return analytics data", function() {
+    const jsonData = res.getBody();
+    expect(jsonData).to.have.property('data');
+    
+    if (jsonData.data !== null) {
+      expect(jsonData.data).to.have.property('task_id');
+      expect(jsonData.data).to.have.property('total_transitions');
+      expect(jsonData.data).to.have.property('status_durations');
+      expect(jsonData.data).to.have.property('completion_time');
+    }
+  });
+}

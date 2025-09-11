@@ -1,0 +1,25 @@
+meta {
+  name: Get Task by ID
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{base_url}}/tasks/{{task_id}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Should return task object", function() {
+    const jsonData = res.getBody();
+    expect(jsonData).to.have.property('data');
+    expect(jsonData.data).to.have.property('id');
+    expect(jsonData.data).to.have.property('name');
+    expect(jsonData.data).to.have.property('status');
+  });
+}

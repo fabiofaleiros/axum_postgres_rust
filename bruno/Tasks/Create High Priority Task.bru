@@ -1,0 +1,37 @@
+meta {
+  name: Create High Priority Task
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{base_url}}/tasks
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Critical security update",
+    "priority": 1
+  }
+}
+
+tests {
+  test("Status should be 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+  
+  test("Should return high priority task", function() {
+    const jsonData = res.getBody();
+    expect(jsonData).to.have.property('data');
+    expect(jsonData.data).to.have.property('id');
+    expect(jsonData.data).to.have.property('name');
+    expect(jsonData.data.name).to.equal('Critical security update');
+    expect(jsonData.data.priority).to.equal(1);
+  });
+}

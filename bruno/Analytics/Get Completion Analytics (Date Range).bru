@@ -1,0 +1,35 @@
+meta {
+  name: Get Completion Analytics (Date Range)
+  type: http
+  seq: 18
+}
+
+get {
+  url: {{base_url}}/analytics/completion?start_date=2024-01-01T00:00:00Z&end_date=2024-12-31T23:59:59Z
+  body: none
+  auth: none
+}
+
+params:query {
+  start_date: 2024-01-01T00:00:00Z
+  end_date: 2024-12-31T23:59:59Z
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Should return completion analytics", function() {
+    const jsonData = res.getBody();
+    expect(jsonData).to.have.property('data');
+    expect(jsonData.data).to.be.an('array');
+    
+    if (jsonData.data.length > 0) {
+      const analytics = jsonData.data[0];
+      expect(analytics).to.have.property('task_id');
+      expect(analytics).to.have.property('total_transitions');
+      expect(analytics).to.have.property('status_durations');
+    }
+  });
+}

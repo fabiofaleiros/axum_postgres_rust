@@ -1,0 +1,37 @@
+meta {
+  name: Update Task
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{base_url}}/tasks/{{task_id}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Updated task name",
+    "priority": 3
+  }
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Should return updated task", function() {
+    const jsonData = res.getBody();
+    expect(jsonData).to.have.property('data');
+    expect(jsonData.data).to.have.property('id');
+    expect(jsonData.data).to.have.property('name');
+    expect(jsonData.data.name).to.equal('Updated task name');
+    expect(jsonData.data.priority).to.equal(3);
+  });
+}

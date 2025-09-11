@@ -1,0 +1,24 @@
+meta {
+  name: Get Valid Transitions
+  type: http
+  seq: 15
+}
+
+get {
+  url: {{base_url}}/tasks/{{task_id}}/transitions
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Should return valid transitions", function() {
+    const jsonData = res.getBody();
+    expect(jsonData).to.have.property('data');
+    expect(jsonData.data).to.have.property('valid_transitions');
+    expect(jsonData.data.valid_transitions).to.be.an('array');
+  });
+}

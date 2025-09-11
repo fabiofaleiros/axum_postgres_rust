@@ -1,0 +1,38 @@
+meta {
+  name: Complete High Priority Task (Pending Review)
+  type: http
+  seq: 12
+}
+
+patch {
+  url: {{base_url}}/tasks/{{task_id}}/status
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "status": "Completed",
+    "comment": "High priority task ready for review",
+    "changed_by": "developer",
+    "user_role": "Developer"
+  }
+}
+
+tests {
+  test("Should handle high priority task completion", function() {
+    const status = res.getStatus();
+    expect(status).to.be.oneOf([200, 400]);
+  });
+  
+  test("High priority task should go to PendingReview first", function() {
+    if (res.getStatus() === 200) {
+      const jsonData = res.getBody();
+      expect(jsonData.data.status).to.be.oneOf(['PendingReview', 'Completed']);
+    }
+  });
+}

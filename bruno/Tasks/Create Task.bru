@@ -1,0 +1,37 @@
+meta {
+  name: Create Task
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{base_url}}/tasks
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Complete project documentation",
+    "priority": 2
+  }
+}
+
+tests {
+  test("Status should be 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+  
+  test("Should return created task", function() {
+    const jsonData = res.getBody();
+    expect(jsonData).to.have.property('data');
+    expect(jsonData.data).to.have.property('id');
+    expect(jsonData.data).to.have.property('name');
+    expect(jsonData.data.name).to.equal('Complete project documentation');
+    expect(jsonData.data.priority).to.equal(2);
+  });
+}

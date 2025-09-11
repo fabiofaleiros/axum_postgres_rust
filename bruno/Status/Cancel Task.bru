@@ -1,0 +1,37 @@
+meta {
+  name: Cancel Task
+  type: http
+  seq: 14
+}
+
+patch {
+  url: {{base_url}}/tasks/{{task_id}}/status
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "status": "Cancelled",
+    "comment": "Task cancelled due to changing requirements",
+    "changed_by": "manager",
+    "user_role": "Manager"
+  }
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Should cancel task successfully", function() {
+    const jsonData = res.getBody();
+    expect(jsonData).to.have.property('data');
+    expect(jsonData.data).to.have.property('status');
+    expect(jsonData.data.status).to.equal('Cancelled');
+  });
+}
