@@ -22,6 +22,7 @@ This Bruno collection contains comprehensive API tests for the Task Management s
 ### Basic Endpoints
 - **Health Check** - Service health verification
 - **API Info** - Service information and metadata
+- **Metrics** - Prometheus metrics exposition endpoint (/metrics)
 
 ### Task Management (CRUD)
 - **Get All Tasks** - Retrieve all tasks
