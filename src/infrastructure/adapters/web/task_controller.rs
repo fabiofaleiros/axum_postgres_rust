@@ -158,11 +158,9 @@ impl TaskController {
         State(controller): State<Arc<TaskController>>,
         Query(params): Query<AnalyticsQuery>,
     ) -> Result<Json<ApiResponse<CompletionAnalyticsDto>>, WebError> {
-        // Default to last 30 days if no dates provided
-        let end_date = params.end_date.unwrap_or_else(|| Utc::now());
-        let start_date = params.start_date.unwrap_or_else(|| end_date - chrono::Duration::days(30));
-
-        let analytics = controller.task_use_cases.get_completion_analytics(start_date, end_date).await?;
+        let analytics = controller.task_use_cases
+            .get_completion_analytics(params.start_date, params.end_date)
+            .await?;
         let response = ApiResponse::success(analytics);
         Ok(Json(response))
     }

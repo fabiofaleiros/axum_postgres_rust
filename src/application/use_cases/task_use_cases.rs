@@ -202,10 +202,23 @@ impl TaskUseCases {
     }
 
     pub async fn get_completion_analytics(
-        &self, 
-        start_date: DateTime<Utc>, 
-        end_date: DateTime<Utc>
+        &self,
+        start_date: Option<DateTime<Utc>>,
+        end_date: Option<DateTime<Utc>>
     ) -> Result<CompletionAnalyticsDto, UseCaseError> {
+        // Business logic: Default to last 30 days if no dates provided
+        const DEFAULT_ANALYTICS_PERIOD_DAYS: i64 = 30;
+
+        let end_date = end_date.unwrap_or_else(|| Utc::now());
+        let start_date = start_date.unwrap_or_else(|| end_date - chrono::Duration::days(DEFAULT_ANALYTICS_PERIOD_DAYS));
+
+        // Validate date range
+        if start_date > end_date {
+            return Err(UseCaseError::ValidationError(
+                "start_date must be before or equal to end_date".to_string()
+            ));
+        }
+
         let analytics_list = self.status_history_repository.get_completion_analytics(start_date, end_date).await?;
         let priority_times = self.status_history_repository.get_average_completion_times().await?;
 
