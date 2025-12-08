@@ -112,14 +112,9 @@ impl TaskController {
     pub async fn delete_task(
         State(controller): State<Arc<TaskController>>,
         Path(task_id): Path<i32>,
-    ) -> Result<(StatusCode, Json<ApiResponse<HashMap<String, String>>>), WebError> {
+    ) -> Result<StatusCode, WebError> {
         controller.task_use_cases.delete_task(task_id).await?;
-        
-        let mut data = HashMap::new();
-        data.insert("message".to_string(), "Task deleted successfully".to_string());
-        
-        let response = ApiResponse::success(data);
-        Ok((StatusCode::NO_CONTENT, Json(response)))
+        Ok(StatusCode::NO_CONTENT)
     }
 
     pub async fn update_task_status(
